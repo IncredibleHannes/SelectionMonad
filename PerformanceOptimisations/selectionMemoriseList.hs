@@ -8,12 +8,12 @@ sequence'' h (e:es) p s = (s''', b : bs)
     where 
       (s'', b) = e (\a s' -> 
           let (s'', rest) = sequence'' (h ++ [a]) es p s' in
-          if h == [] then p (h ++ [a] ++ rest) (([a], rest) : s'')
+          if null h then p (h ++ [a] ++ rest) (([a], rest) : s'')
           else p (h ++ [a] ++ rest) s''
         ) s
-      (s''', bs) = case (lookup' [b] s'') of
-        (Just (a,b)) -> trace (show (a,b)) $ (s'', a ++ b)
-        (Nothing) -> sequence'' (h ++ [b]) es p s''
+      (s''', bs) = case lookup' [b] s'' of
+        (Just (a,b)) -> trace (show (a,b)) (s'', a ++ b)
+        Nothing -> sequence'' (h ++ [b]) es p s''
 
 lookup' :: String -> [(String, String)] -> Maybe (String, String)
 lookup' _ [] = Nothing
@@ -35,7 +35,7 @@ selectChar p = maxWith p ['a' .. 'z']
 --solution = sequence' [selectChar,selectChar,selectChar,selectChar,selectChar,selectChar] p
 
 selectChar' :: (Char -> [(String, String)] ->  ([(String,String)], Bool)) -> [(String,String)] -> ([(String,String)], Char)
-selectChar' p s = helper p ['a'..'z'] s
+selectChar' p = helper p ['a'..'z'] 
 
 helper :: (Char -> [(String, String)] -> ([(String,String)], Bool)) -> [Char] -> [(String,String)] -> ([(String,String)], Char)
 helper p [a] s    = (s,a)

@@ -13,10 +13,10 @@ sequence' :: [J r x] -> J r [x]
 sequence' [] p     = []
 sequence' (e:es) p = b : bs
     where
-        b = e (\a -> p (a : (sequence' es (p . (a:)))))
+        b = e (\a -> p (a : sequence' es (p . (a:))))
         bs = sequence' es (p . (b:))
 
-sequence'' :: String -> (HashTable String String) -> [JS r Char] -> JS r String
+sequence'' :: String -> HashTable String String -> [JS r Char] -> JS r String
 sequence'' _ s [] p     = return []
 sequence'' h s (e:es) p = do {
     b <- do {
@@ -30,8 +30,8 @@ sequence'' h s (e:es) p = do {
     };
     l <- H.lookup s (h ++ [b]);
     case l of
-      (Just a) -> return ([b] ++ a)
-      (Nothing) -> do {
+      (Just a) -> return [b] ++ a
+      Nothing -> do {
         bs <- sequence'' (h ++ [b]) s es p;
         return (b : bs)
       }
@@ -56,7 +56,7 @@ selectChar' :: (Char -> IO Bool) -> IO Char
 selectChar' p = helper p ['a'..'z']
 
 helper :: (Char -> IO Bool) -> [Char] -> IO Char
-helper p [a]    = p a >>= \_ -> return a
+helper p [a]    = p a >>= return a
 helper p (a:as) = do p a >>= \result -> if result then return a else helper p as
 
 type HashTable k v = H.BasicHashTable k v

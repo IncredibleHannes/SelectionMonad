@@ -13,7 +13,7 @@ sequence' :: [J r x] -> J r [x]
 sequence' [] p     = []
 sequence' (e:es) p = b : bs
     where
-        b = e (\a -> p (a : (sequence' es (p . (a:)))))
+        b = e (\a -> p (a : sequence' es (p . (a:))))
         bs = sequence' es (p . (b:))
 
 sequence'' :: String -> [JS r Char] -> JS r String
@@ -23,16 +23,16 @@ sequence'' h (e:es) p = do {
       e (\a -> do {
             rest <- sequence'' (h ++ [a]) es p;
             s <- get;
-            if h == [] then do {
+            if null h then do {
               put (insert (h ++ [a]) rest s);
               p (h ++ [a] ++ rest)
             } else p (h ++ [a] ++ rest)
       })
     };
     s <- get;
-    case (H.lookup (h ++ [b]) s) of
-      (Just a) ->  return ([b] ++ a)
-      (Nothing) -> do {
+    case H.lookup (h ++ [b]) s of
+      (Just a) ->  return [b] ++ a
+      Nothing -> do {
         bs <- sequence'' (h ++ [b]) es p;
         return (b : bs)
       }

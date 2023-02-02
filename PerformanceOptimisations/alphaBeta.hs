@@ -11,7 +11,7 @@ hsequence :: [x] -> [[x] -> (x -> r) -> x] -> ([x] -> r) -> [x]
 hsequence h [] p       = []
 hsequence h (e : es) p = a : as
     where 
-        a  = (e h) (\x -> p (x : hsequence (h ++ [x]) es (p . (x:)))) 
+        a  = e h (\x -> p (x : hsequence (h ++ [x]) es (p . (x:)))) 
         as = hsequence (h++[a]) es (p . (a:))
 
 
@@ -23,7 +23,7 @@ sabsequence :: [x] -> [[x] -> JS x] -> JS [x]
 sabsequence h [] p       = return []
 sabsequence h (e : es) p = do {
         s <- get;
-        a <- (e h) p';
+        a <- e h p';
         put (minBound, maxBound);
         as <- sabsequence (h ++ [a]) es (p . (a:));
         return (a : as)
@@ -34,7 +34,7 @@ sabsequence h (e : es) p = do {
             p (x : xs)
         }
 
-argMin xs p = abMax (minBound,head (getMoves xs)) (getMoves xs) p
+argMin xs = abMax (minBound,head (getMoves xs)) (getMoves xs)
 
 abMax :: (Int, x) -> [x] -> JS x
 abMax (c, v) [] p = return v;
@@ -47,7 +47,7 @@ abMax (c, v) (x:xs) p = do {
         if cost > c then abMax (cost, x) xs p else abMax (c,v) xs p
 }
 
-argMax xs p = abMin (maxBound,head (getMoves xs)) (getMoves xs) p
+argMax xs = abMin (maxBound,head (getMoves xs)) (getMoves xs)
 
 abMin :: (Int, x) -> [x] -> JS x
 abMin (c, v) [] p = return v;
@@ -70,18 +70,18 @@ example = Node 1 6 [Node 2 3 [Node 5 5 [Node 11 5 [Node 20 5 [], Node 21 6 []], 
 
 getMoves :: [Tree] -> [Tree]
 getMoves [] = [example]
-getMoves [(Node _ _ xs)] = xs
+getMoves [Node _ _ xs] = xs
 getMoves (x:xs) = getMoves xs
 
 
 treeCost :: [Tree] -> State ABState Int
 treeCost [] = return 0
-treeCost [(Node i c _)] = return c
+treeCost [Node i c _] = return c
 treeCost ((Node i c _):xs) = treeCost xs
 
 treeCost' :: [Tree] -> Int
 treeCost' [] =  0
-treeCost' [(Node i c _)] = c
+treeCost' [Node i c _] = c
 treeCost' ((Node i c _):xs) = treeCost' xs
 
 solution = runState (sabsequence [] [argMax, argMin, argMax, argMin, argMax] treeCost) (minBound, maxBound)
@@ -163,8 +163,8 @@ p ms = value(outcome X ms (matrix 5 3 (const N)))
 epsilons :: [[Move] -> (Move -> State ABState R) -> State ABState Move]
 epsilons = take 9 all
   where all = epsilonX : epsilonO : all
-        epsilonX history f = abMin(maxBound,head (getPossibleMoves history)) (getPossibleMoves history) f
-        epsilonO history f = abMax (minBound,head (getPossibleMoves history)) (getPossibleMoves history) f
+        epsilonX history = abMin(maxBound,head (getPossibleMoves history)) (getPossibleMoves history)
+        epsilonO history = abMax (minBound,head (getPossibleMoves history)) (getPossibleMoves history)
 
 epsilons' :: [[Move] -> J R Move]
 epsilons' = take 9 all
