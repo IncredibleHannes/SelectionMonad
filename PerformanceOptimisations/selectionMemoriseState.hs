@@ -16,6 +16,10 @@ sequence' (e:es) p = b : bs
         b = e (\a -> p (a : sequence' es (p . (a:))))
         bs = sequence' es (p . (b:))
 
+type MState = HashMap String String 
+
+type JS r x = (x -> State MState r) -> State MState x
+
 sequence'' :: String -> [JS r Char] -> JS r String
 sequence'' _ [] p     = return []
 sequence'' h (e:es) p = do {
@@ -23,24 +27,20 @@ sequence'' h (e:es) p = do {
       e (\a -> do {
             rest <- sequence'' (h ++ [a]) es p;
             s <- get;
-            if null h then do {
+            --if Prelude.null h then do {
               put (insert (h ++ [a]) rest s);
               p (h ++ [a] ++ rest)
-            } else p (h ++ [a] ++ rest)
+            -- } else p (h ++ [a] ++ rest)
       })
     };
     s <- get;
     case H.lookup (h ++ [b]) s of
-      (Just a) ->  return [b] ++ a
+      (Just a) ->  return ([b] ++ a)
       Nothing -> do {
         bs <- sequence'' (h ++ [b]) es p;
         return (b : bs)
       }
   }
-
-type MState = HashMap String String 
-
-type JS r x = (x -> State MState r) -> State MState x
 
 
 
@@ -49,13 +49,13 @@ type Password = String
 password = "secr"
 
 p :: String -> Bool
-p "secret"    = True
-p [_,_,_,_,_,_] = False
+p "secr"    = True
+p _ = False
 
 selectChar :: (Char -> Bool) -> Char
 selectChar p = maxWith p ['a' .. 'z']
 
-solution = sequence' [selectChar,selectChar,selectChar,selectChar,selectChar,selectChar] p
+solution = sequence' [selectChar,selectChar,selectChar,selectChar] p
 
 selectChar' :: (Char -> State MState Bool) -> State MState Char
 selectChar' p = helper p ['a'..'z']
@@ -64,4 +64,4 @@ helper :: (Char -> State MState Bool) -> [Char] -> State MState Char
 helper p [a]    = return a
 helper p (a:as) = do p a >>= \result -> if result then return a else helper p as
 
-solution' = runState (sequence'' "" [selectChar',selectChar',selectChar',selectChar',selectChar'] (return . p)) empty
+solution' = runState (sequence'' "" [selectChar',selectChar',selectChar',selectChar'] (return . p)) empty

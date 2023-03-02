@@ -61,7 +61,6 @@ helper p (a:as) = do p a >>= \result -> if result then return a else helper p as
 
 type HashTable k v = H.BasicHashTable k v
 
-
 solution' = do {
   e <- H.new;
   sequence'' "" e [selectChar',selectChar',selectChar',selectChar'] (return . p)

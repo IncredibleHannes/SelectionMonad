@@ -1,6 +1,9 @@
-import Data.HashMap.Strict as H
 import Control.Monad.State
 import Debug.Trace
+
+maxWith :: Ord b => (a -> b) -> [a] -> a
+maxWith f = foldr1 (bigger f)
+  where bigger f x y = if f x >= f y then x else y
 
 sequence'' :: String -> [JS r Char] -> JS r String
 sequence'' _ [] p s    =  (s, [])
