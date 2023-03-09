@@ -1,6 +1,7 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 import Debug.Trace
 import Control.Arrow
+import Prelude hiding ((>>=), return, sequence)
 
 -- tests with more general J without the generalised result type
 type J r x =  (x -> (r,x)) -> (r,x)
@@ -66,7 +67,7 @@ kk2k :: KK r x -> K r x
 kk2k f = \p -> f (\x -> let (r,y) = p x in (r, (r,y)))
 
 
-{-- Proof of the isomorphism
+{--  Proof of the isomorphism
 
 assuming that for 
 g :: K r x
@@ -77,6 +78,16 @@ g p = p x
 
 Making sure that g is not changing the r value after applying p to its elements
 
+kk2k(k2kk g)
+ = kk2k(snd . g)
+ = \p -> (snd . g) (\x -> let (r,y) = p x in (r, (r,y)))
+ = \p -> snd (g(\x -> let (r,y) = p x in (r, (r,y))))
+ = \p -> snd (exist x -> let (r,y) = p x in (r, (r,y))) -- assumption
+ = \p -> exists x -> snd $ let (r,y) = p x in (r, (r,y)) -- exists commute
+ = \p -> exists x -> let (r,y) = p x in snd (r, (r,y))  -- assumption
+ = \p -> g (\x -> let (r,y) = p x in snd (r, (r,y)))
+ = \p -> g p
+ = g
 
 k2kk(kk2k f)
  = k2kk(\p -> f (\x -> let (r,y) = p x in (r, (r,y))))
@@ -86,12 +97,7 @@ k2kk(kk2k f)
  = (\p -> f p)
  = f
 
-kk2k(k2kk g)
- = kk2k(snd . g)
- = \p -> (snd . g) (\x -> let (r,y) = p x in (r, (r,y))) -- *
- = \p -> g (\x -> let (r,y) = p x in snd (r, (r,y))) 
- = \p -> g p
- = g
+
 
 * Free Theorem of KK 
 g :: forall y. (\x -> (r,y)) -> y 
@@ -114,27 +120,6 @@ g :: forall y. (\x -> (r,y)) -> (r,y)
 = g (\x -> let (r,y) = p x in snd (r, (r,y))) 
 
 But this is not true:
-g' :: K Int Int
-g' p = if r == 1 then (r+1,x) else (42,x)
-    where (r, x) = p 1
-
-g'' = kk2k(k2kk g')  
-f' x = x+1
-p' 1 = (1,1) 
-
---}
-
-
-{--
-would be a nice theorem to have but here is a counter example:
-** Theorem of K
-g :: forall y. (x -> (r,y)) -> (r,y)
-Given:
-f :: (r, a) -> (r, b)
-p :: x -> (r, a)
-(f . g) p = g (f . p)
---}
-
 g :: K Int Int
 g p = (r+1, x)
     where (r, x) = p 1
@@ -143,23 +128,10 @@ g' = kk2k(k2kk g)
 
 p _ = (1,1) 
 
-{-
-g p -- > (1,1)
-g' p -- > (2,1)
--}
---test'  = f'  (g'' p')  -- > (8,2)
---test'' = g'' ((id *** f') . p') -- > (10,2)
-
-
-{--
-** Theorem of K
-g :: forall y. (x -> (r,y)) -> (r,y)
-Given:
-f :: a -> b
-p :: x -> (r, a)
-((id *** f) . g) p = g ((id *** f) . p)
-
-
--- (snd . g) p = g (snd . p)
 --}
 
+
+-- Making K a monad
+
+(>>=) :: K r x -> (x -> K r y) -> K r y
+e >>= f = undefined
