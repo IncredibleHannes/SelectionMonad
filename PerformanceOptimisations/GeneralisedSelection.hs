@@ -1,31 +1,11 @@
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 import Debug.Trace
 import Control.Arrow
+import Data.Function (on)
+import Data.List
 import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence)
-
--- tests with more general J without the generalised result type
-type J r x =  (x -> (r,x)) -> (r,x)
-
-
--- not working
-sequenceJ :: [J r x] ->  J r [x]
-sequenceJ [e] p = let (r , x) = e (\x -> let (r, [x]) = p [x] in (r,x)) in (r, [x])
-sequenceJ (e:es) p = let (r , x) = e (\x -> let (r, y) = p (y ++ snd (sequenceJ es (\z -> p (y++z)) )) in (r,x)) in (r, x : snd (sequenceJ es (\y -> p (x:y)) ))
-
-pair :: J r x -> J r y -> J r (x,y)
-pair f g p = (r, (x,y))
-    where
-        (r,x) = f (\x -> let (s, y) = g (\y -> let (t,(a,b)) = p (x,y) in (t,b)) in (s,x) )
-        (_,y) = g (\y -> let (t,(_,b)) = p (x,y) in (t,b))
-
-test = pairK (minWith [1..4]) (maxWith [2..4]) (\(x,y) -> (x + y, (x,y)))
-
-es' :: [J Int Int]
-es' = [minWith [1..4], maxWith [1..4],minWith [1..4], maxWith [1..4]]
-
-test3 = sequenceJ es' (\x -> trace "call" $ (sum x, x))
-
--- New generalised K that returns the r along with the result
 
 type K r x = forall y. (x -> (r,y)) -> (r,y)
 
@@ -35,6 +15,12 @@ minWith xs f = foldr1 (\(r,x) (s,y) -> if r < s then (r,x) else (s,y) ) (map f x
 
 maxWith :: Ord r => forall y . [x] -> (x -> (r,y)) -> (r,y)
 maxWith xs f = foldr1 (\(r,x) (s,y) -> if r > s then (r,x) else (s,y) ) (map f xs)
+
+minWithJ :: Ord b => [a] -> (a -> b) -> a
+minWithJ xs f = snd (minimumBy (compare `on` fst) (map (\x -> (f x , x)) xs))
+
+maxWithJ :: Ord b => [a] -> (a -> b) -> a
+maxWithJ xs f = snd (maximumBy (compare `on` fst) (map (\x -> (f x , x)) xs))
 
 -- pair and sequence for the new K
 
@@ -50,22 +36,84 @@ hsequenceK [e] h p = e h (\x -> p [x])
 hsequenceK (e:es) h p = e h (\x -> hsequenceK es (h ++ [x]) (\xs -> p (x:xs)))
 
 -- tests for the new K
-
+n = 70
+p = (\x -> (sum x, x))
 es :: [K Int Int]
-es = [minWith [1..4], maxWith [1..4],minWith [1..4], maxWith [1..4]]
+es = [e1,e2,e1,e2]
+  where 
+    e1 = (minWith [1..n])
+    e2 = (maxWith [1..n]) 
 
-test2 = sequence es (\x -> trace "call" $ (sum x, x))
+es' :: [KK Int Int]
+es' = [e1,e2,e1,e2]
+  where 
+    e1 = snd . (minWith [1..n])
+    e2 = snd . (maxWith [1..n]) 
 
+es'' :: [J Int Int]
+es'' = [e1,e2,e1,e2]
+  where 
+    e1 = (minWithJ [1..n])
+    e2 = (maxWithJ [1..n]) 
+
+es''' :: [K Int Int]
+es''' = [e1,e2,e1,e2]
+  where 
+    e1 = kk2k (j2kk (minWithJ [1..n]))
+    e2 = kk2k (j2kk (maxWithJ [1..n]))
+
+sequenceJ :: [J r x] -> J r [x]
+sequenceJ [] p     = []
+sequenceJ (e:es) p = b : bs
+    where
+        b = e (\a -> p (a : sequenceJ es (p . (a:))))
+        bs = sequenceJ es (p . (b:))
+
+type J r x = (x -> r) -> x
+
+kk2j :: KK r x -> J r x
+kk2j f = (\p -> f (\x -> (p x, x)))
+
+j2kk :: J r x -> KK r x
+j2kk f = (\p -> snd (p (f (\x -> fst (p x)))))
+
+test1 = sequenceK es p                    -- 6.83    
+test2 = sequenceKK es' p                  -- 13.90
+test3 = kk2k (sequenceKK es') p           -- 13.17
+test4 = sequenceJ es'' sum                -- 7.13
+test5 = j2kk (sequenceJ es'') p          -- 9.64
+test6 = kk2j (sequenceKK es') sum        -- 11.31
+test7 = k2kk (sequenceK es) p            -- 7.43           
+test8 = kk2j (k2kk (sequenceK es)) sum   -- 5.04
+test9 = sequenceK es''' p                    -- 8.74
+test10 = (kk2j $ k2kk $ sequenceK es''') sum -- 7.38
+
+{-
+j2k :: J r x -> K r x
+j2k x = k
+  where
+    kk :: KK r x = j2kk x
+    k :: K r x = kk2k kk
+
+--k2j :: K r x -> J r x
+--k2j x = kk2j . k2kk
+-}
 -- Isomorphism between the new K and Toms Special K
 
 type KK r x = forall y. (x -> (r,y)) -> y
 
-k2kk :: K r x -> KK r x
+k2kk :: forall r x y z. ((x -> (r,y)) -> (r,y)) -> ((x -> (r,y)) -> y)
 k2kk f = snd . f
 
 kk2k :: KK r x -> K r x
 kk2k f = \p -> f (\x -> let (r,y) = p x in (r, (r,y)))
 
+pairKK :: KK r a -> KK r b -> KK r (a, b)
+pairKK f g = (\p -> f (\x -> g (\y -> let (r, z) = p (x,y) in (r, (r, z)))))
+
+sequenceKK :: [KK r a] -> KK r [a]
+sequenceKK [] p     = snd $ p []
+sequenceKK (e:es) p = e (\x -> sequenceKK es (\xs -> let (r,z) = p (x:xs) in (r,(r,z))))
 
 {--  Proof of the isomorphism
 
