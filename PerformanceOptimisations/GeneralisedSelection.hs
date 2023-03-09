@@ -1,7 +1,7 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 import Debug.Trace
 import Control.Arrow
-import Prelude hiding ((>>=), return, sequence)
+import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence)
 
 -- tests with more general J without the generalised result type
 type J r x =  (x -> (r,x)) -> (r,x)
@@ -54,7 +54,7 @@ hsequenceK (e:es) h p = e h (\x -> hsequenceK es (h ++ [x]) (\xs -> p (x:xs)))
 es :: [K Int Int]
 es = [minWith [1..4], maxWith [1..4],minWith [1..4], maxWith [1..4]]
 
-test2 = sequenceK es (\x -> trace "call" $ (sum x, x))
+test2 = sequence es (\x -> trace "call" $ (sum x, x))
 
 -- Isomorphism between the new K and Toms Special K
 
@@ -134,4 +134,61 @@ p _ = (1,1)
 -- Making K a monad
 
 (>>=) :: K r x -> (x -> K r y) -> K r y
-e >>= f = undefined
+e >>= f = \p -> e ((flip f) p)
+
+return :: x -> K r x
+return x p = p x 
+
+(<*>) :: K r (x -> y) -> K r x -> K r y
+f <*> g = \p -> f (\e -> g (p . e))
+
+pure :: x -> K r x
+pure = flip ($)
+
+fmap :: (x -> y) -> K r x -> K r y
+fmap f e = \p -> e (p . f)
+
+
+sequence :: [K r x] -> K r [x]
+sequence []     = return []
+sequence (e:es) = e >>= (
+                  \x -> sequence es >>= 
+                  \xs -> return (x:xs))
+
+{--
+-- Monad Laws
+
+-- Left identity: 	
+return a >>= h
+ = (flip ($)) a >>= h
+ = (\p -> p a) >>= h
+ = \p' -> (\p -> p a) ((flip h) p')
+ = \p' -> ((flip h) p') a
+ = \p' -> h a p'
+ = h a
+
+-- Right identity: 	
+m >>= return 
+ = \p -> m ((flip return) p)
+ = \p -> m ((flip (flip ($))) p)
+ = \p -> m (($) p)
+ = \p -> m p
+ = m 
+
+-- Associativity: 	
+
+e >>= f = \p -> e ((flip f) p)
+
+(m >>= g) >>= h 
+ = \p -> (m >>= g) ((flip h) p)
+ = \p -> (\p' -> m ((flip g) p')) ((flip h) p)
+ = \p -> (m ((flip g) ((flip h) p))) 
+ = \p -> m ((\y x -> g x y) ((flip h) p))
+ = \p -> m ((\x -> g x ((flip h) p)))
+ = \p -> m ((\p' x -> (g x) ((flip h) p')) p)
+ = \p -> m ((flip (\x p' -> (g x) ((flip h) p'))) p)
+ = \p -> m ((flip (\x -> (\p' -> (g x) ((flip h) p')))) p)
+ = \p -> m ((flip (\x -> g x >>= h)) p)
+ = m >>= (\x -> g x >>= h)
+
+--}
