@@ -1,8 +1,8 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-import Debug.Trace
-import Control.Arrow
+import Debug.Trace ()
+import Control.Arrow ()
 import Data.Function (on)
 import Data.List
 import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence)
@@ -24,7 +24,7 @@ maxWithJ xs f = snd (maximumBy (compare `on` fst) (map (\x -> (f x , x)) xs))
 
 -- pair and sequence for the new K
 
-pairK :: K r x ->  K r y -> K r (x,y)
+pairK :: K r x -> K r y -> K r (x,y)
 pairK f g p = f (\x -> g(\y -> p(x,y)))
 
 sequenceK :: [K r x] -> K r [x]
