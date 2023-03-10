@@ -37,24 +37,27 @@ hsequenceK (e:es) h p = e h (\x -> hsequenceK es (h ++ [x]) (\xs -> p (x:xs)))
 
 -- tests for the new K
 n = 70
-p = (\x -> (sum x, x))
+
+p :: [Int] -> (Int, [Int])
+p x = (sum x, x)
+
 es :: [K Int Int]
 es = [e1,e2,e1,e2]
   where 
-    e1 = (minWith [1..n])
-    e2 = (maxWith [1..n]) 
+    e1 = minWith [1..n]
+    e2 = maxWith [1..n] 
 
 es' :: [KK Int Int]
 es' = [e1,e2,e1,e2]
   where 
-    e1 = snd . (minWith [1..n])
-    e2 = snd . (maxWith [1..n]) 
+    e1 = snd . minWith [1..n]
+    e2 = snd . maxWith [1..n]
 
 es'' :: [J Int Int]
 es'' = [e1,e2,e1,e2]
   where 
-    e1 = (minWithJ [1..n])
-    e2 = (maxWithJ [1..n]) 
+    e1 = minWithJ [1..n]
+    e2 = maxWithJ [1..n] 
 
 es''' :: [K Int Int]
 es''' = [e1,e2,e1,e2]
@@ -72,10 +75,10 @@ sequenceJ (e:es) p = b : bs
 type J r x = (x -> r) -> x
 
 kk2j :: KK r x -> J r x
-kk2j f = (\p -> f (\x -> (p x, x)))
+kk2j f p = f (\x -> (p x, x))
 
 j2kk :: J r x -> KK r x
-j2kk f = (\p -> snd (p (f (\x -> fst (p x)))))
+j2kk f p = snd (p (f (fst . p)))
 
 test1 = sequenceK es p                    -- 6.83    
 test2 = sequenceKK es' p                  -- 13.90
@@ -106,10 +109,10 @@ k2kk :: forall r x y z. ((x -> (r,y)) -> (r,y)) -> ((x -> (r,y)) -> y)
 k2kk f = snd . f
 
 kk2k :: KK r x -> K r x
-kk2k f = \p -> f (\x -> let (r,y) = p x in (r, (r,y)))
+kk2k f p =  f (\x -> let (r,y) = p x in (r, (r,y)))
 
 pairKK :: KK r a -> KK r b -> KK r (a, b)
-pairKK f g = (\p -> f (\x -> g (\y -> let (r, z) = p (x,y) in (r, (r, z)))))
+pairKK f g p = f (\x -> g (\y -> let (r, z) = p (x,y) in (r, (r, z))))
 
 sequenceKK :: [KK r a] -> KK r [a]
 sequenceKK [] p     = snd $ p []
@@ -182,7 +185,7 @@ p _ = (1,1)
 -- Making K a monad
 
 (>>=) :: K r x -> (x -> K r y) -> K r y
-e >>= f = \p -> e ((flip f) p)
+e >>= f = e . flip f 
 
 return :: x -> K r x
 return x p = p x 
@@ -194,7 +197,7 @@ pure :: x -> K r x
 pure = flip ($)
 
 fmap :: (x -> y) -> K r x -> K r y
-fmap f e = \p -> e (p . f)
+fmap f e p = e (p . f)
 
 
 sequence :: [K r x] -> K r [x]
