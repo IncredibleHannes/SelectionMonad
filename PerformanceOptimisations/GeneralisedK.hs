@@ -34,7 +34,7 @@ these K's are isomorpic to J
 -}
 
 bindK :: K r x -> (x -> K r y) -> K r y
---bindK' f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))
+--bindK f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))
 --equivalent by substitution
 --bindK f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))                                                         -- definition of bindJ
 --bindK f g = j2k ((\f g p -> g (f (p . flip g p)) p) (k2j f) (\x -> k2j (g x)))                            -- lambda application
@@ -48,8 +48,10 @@ bindK :: K r x -> (x -> K r y) -> K r y
 --bindK f g p = p (k2j (g (k2j f (fst . p . (\x -> k2j (g x) (fst . p))))) (fst . p))                       -- def k2j
 --bindK f g p = p (k2j (g (k2j f (fst . p . (\x -> snd ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))      -- rewrite lambda
 --bindK f g p = p (k2j (g (k2j f (\x -> (fst . p . snd) ((g x) (\x -> ((fst . p) x, x)))  ))) (fst . p))    -- rewrite composition
---bindK f g p = p (k2j (g (k2j f (\x -> fst ((p . snd) ((g x) (\x -> ((fst . p) x, x)))) ))) (fst . p))     -- theorem 2
---bindK f g p = p (k2j (g (k2j f (\x -> fst ((p . snd) ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))      -- simplify
+
+
+--bindK f g p = p (k2j (g (k2j f (\x -> fst ((p . snd) ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))      -- theorem 2
+--bindK f g p = p (k2j (g (k2j f (\x -> fst (((g x) (\x -> (p . snd) ((fst . p) x, x))))))) (fst . p))      -- simplify
 --bindK f g p = p (k2j (g (k2j f (\x -> fst (g x p)))) (fst . p))                                           -- def j2k
 --bindK f g p = p (k2j (g (snd (f (\x -> ((\x -> fst (g x p)) x, x))))) (fst . p))                          -- apply lambda
 --bindK f g p = p (k2j (g (snd (f (\x -> (fst (g x p), x))))) (fst . p))                                    -- def j2k                     
@@ -59,7 +61,7 @@ bindK :: K r x -> (x -> K r y) -> K r y
 --bindK f g p = f ((\y -> g (snd y) p) . (\x -> (fst (g x p), x)))                                          -- def (.)    
 --bindK f g p = f (\x -> (\y -> g (snd y) p) (fst (g x p), x) )                                             -- apply lambda and simplify
 --bindK f g p = f (\x -> g x p)
-bindK f g = f . flip g 
+--bindK f g = f . flip g 
 
 
 -- ******************* Start alternative route *******************************
@@ -104,6 +106,18 @@ bindK f g = f . flip g
 
 
 -- *********************** Theorems used in the substitution for bind ***********************
+-- Assumption:
+-- g :: K r x
+-- forall p :: forall y . (x -> (r,y))
+-- exists x :: x
+-- such that:
+-- g p = p x
+
+-- Free theorem for K
+-- g :: K r x
+-- f :: a -> b
+-- p :: x -> (r, a)
+-- ((id *** f) . g) p = g ((id *** f) . p)
 
 -- Theorem 1
 -- If q does apply p to get the r value but keeps the original value, 
@@ -112,7 +126,9 @@ bindK f g = f . flip g
 -- p :: x -> (r,y)
 -- g :: K r x
 -- p (snd (g q)) = g p
--- where q = (\x -> ((fst . p) x, x))
+--    where q = (\x -> ((fst . p) x, x))
+
+-- (p . snd) (g q) = g (\x -> (p . snd) ((fst . p) x, x))
 
 -- Proof: TODO!
 
@@ -121,6 +137,22 @@ bindK f g = f . flip g
 -- g :: K r x
 -- p :: x -> (r,a)
 -- f (g p) = g (f . p)
+-- iff (fst . f . p) = fst . p
+
+-- Should be proovable with the Free theorem for K and our assumption that g is not modifying the r value
+
+-- Theorem Flase!!!! Counter example --{
+
+f' (1,x) = (10,x)
+f' x = x 
+g' p = if p 1 == (1,1) then (1,1) else p 2
+p' 1 = (1,1)
+p' 2 = (2,2) 
+
+--}
+
+ 
+
 
 -- Proof: TODO!
 
