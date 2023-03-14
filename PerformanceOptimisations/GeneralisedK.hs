@@ -48,8 +48,6 @@ bindK :: K r x -> (x -> K r y) -> K r y
 --bindK f g p = p (k2j (g (k2j f (fst . p . (\x -> k2j (g x) (fst . p))))) (fst . p))                       -- def k2j
 --bindK f g p = p (k2j (g (k2j f (fst . p . (\x -> snd ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))      -- rewrite lambda
 --bindK f g p = p (k2j (g (k2j f (\x -> (fst . p . snd) ((g x) (\x -> ((fst . p) x, x)))  ))) (fst . p))    -- rewrite composition
-
-
 --bindK f g p = p (k2j (g (k2j f (\x -> fst ((p . snd) ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))      -- theorem 2
 --bindK f g p = p (k2j (g (k2j f (\x -> fst (((g x) (\x -> (p . snd) ((fst . p) x, x))))))) (fst . p))      -- simplify
 --bindK f g p = p (k2j (g (k2j f (\x -> fst (g x p)))) (fst . p))                                           -- def j2k
@@ -77,7 +75,7 @@ bindK :: K r x -> (x -> K r y) -> K r y
 --bindK f g = \p -> p ((\p -> snd (g (snd (f (\x -> ( p (snd ((g x) (\x -> (p x, x)))), x)))) (\x -> (p x, x)))) (fst . p))         -- removing outer lambda     
 --bindK f g p = p ((\p -> snd (g (snd (f (\x -> ( p (snd ((g x) (\x -> (p x, x)))), x)))) (\x -> (p x, x)))) (fst . p))             -- lambda application
 --bindK f g p = p (snd (g (snd (f (\x -> ((fst . p) (snd ((g x) (\x -> ((fst . p) x, x)))), x)))) (\x -> ((fst . p) x, x))))        -- rewrite (.)
---bindK f g p = p (snd (g (snd (f (\x -> (fst ((p . snd) ((g x) (\x -> ((fst . p) x, x)))), x)))) (\x -> ((fst . p) x, x))))        -- Theorem 2
+-- bindK f g p = p (snd (g (snd (f (\x -> (fst ((p . snd) ((g x) (\x -> ((fst . p) x, x)))), x)))) (\x -> ((fst . p) x, x))))        -- Theorem 2
 --bindK f g p = p (snd (g (snd (f (\x -> (fst ((g x) (p . snd . (\x -> ((fst . p) x, x)))), x)))) (\x -> ((fst . p) x, x))))        -- def (.)
 --bindK f g p = p (snd (g (snd (f (\x -> (fst ((g x) (\x -> p (snd ((fst . p) x, x))))  , x)))) (\x -> ((fst . p) x, x))))          -- def snd
 --bindK f g p = p (snd (g (snd (f (\x -> (fst ((g x) (\x -> p x)), x)))) (\x -> ((fst . p) x, x))))                                 -- remove lambda
@@ -96,7 +94,7 @@ bindK :: K r x -> (x -> K r y) -> K r y
 --bindK f g p = f (\x -> (\(r,x) -> g x p) ((\x -> g x (\y -> let (r,z) = p y in (r,x))) x))                                        -- apply lambda
 --bindK f g p = f (\x -> (\(r,y) -> g y p) ((g x) (\y -> let (r,z) = p y in (r,x))))                                                -- Theorem 2
 --bindK f g p = f (\x -> g x ((\(r,y) -> g y p) . (\y -> let (r,z) = p y in (r,x))))                                                -- def (.)
---bindK f g p = f (\x -> g x ( \y -> (\(r,y) -> g y p) ((\y -> let (r,z) = p y in (r,x))y) ))                                       -- apply lambda
+--bindK f g p = f (\x -> g x (\y -> (\(r,y) -> g y p) ((\y -> let (r,z) = p y in (r,x))y) ))                                       -- apply lambda
 --bindK f g p = f (\x -> g x (\y -> (\(r,y) -> g y p) (let (r,z) = p y in (r,x))))                                                  -- resolve patternmatch
 --bindK f g p = f (\x -> g x (\y -> (\z -> g (snd z) p) (let (r,z) = p y in (r,x))))                                                -- apply lambda
 --bindK f g p = f (\x -> g x (\y -> g (snd (let (r,z) = p y in (r,x))) p ))                                                         -- remove snd
@@ -105,19 +103,58 @@ bindK :: K r x -> (x -> K r y) -> K r y
 --bindK f g = f . flip g 
 
 
--- *********************** Theorems used in the substitution for bind ***********************
--- Assumption:
--- g :: K r x
--- forall p :: forall y . (x -> (r,y))
--- exists x :: x
--- such that:
--- g p = p x
+*********************** Theorems used in the substitution for bind ***********************
+{-
+Assumption:
+g :: K r x
+forall p :: forall y . (x -> (r,y))
+exists x :: x
+such that:
+g p = p x
 
--- Free theorem for K
--- g :: K r x
--- f :: a -> b
--- p :: x -> (r, a)
--- ((id *** f) . g) p = g ((id *** f) . p)
+
+Free theorem for K
+g :: K r x
+f :: a -> b
+p :: x -> (r, a)
+((id *** f) . g) p = g ((id *** f) . p)
+
+
+Theorem 2
+f :: (r,a) -> (r,b)
+g :: K r x
+p :: x -> (r,a)
+f (g p) = g (f . p)
+
+iff (fst . f . p) = fst . p
+
+Proof:
+f (g p)
+exists x ->                                                                          -- Assumption
+= f (p x)                                                                            -- rewrite as tuples 
+= ((fst . f . p) x, (snd . f . p) x)                                                 -- Theorem 2 condition
+= ((fst . p ) x , (snd . f . p) x)                                                   -- rewrite as let
+= let (r, y) = p x in (r, snd (f (r,y)))                                             -- rewrite as ***
+= let (r, y) = p x in (id *** (\y -> snd (f (r,y)))) (r, y)                          -- resolve ***
+= let (r, y) = p x in (\(a,b) -> (a, (\y -> snd (f (r,y))) b)) (r, y)                -- apply lambda
+= let (r, y) = p x in (\(a,b) -> (a, snd (f (r,b)))) (r, y)                          -- expand let
+= let r = fst (p x) in let y = snd (p x) in (\(a,b) -> (a, snd (f (r,b)))) (r, y)    -- remove let
+= (\(a,b) -> (a, snd (f (fst (p x), b)))) ((fst (p x)), (snd (p x)))                 -- simplify
+= (\(a,b) -> (a, snd (f (fst (p x), b)))) p x                                        -- remove patternmatch in lambda
+= (\a -> (fst a, snd (f (fst (p x), snd a)))) p x                                    -- replace (p x) with a within lambda
+= (\a -> (fst a, snd (f (fst a, snd a)))) p x                                        -- add patternmatch to lamvda
+= (\(r,y) -> (r, snd (f (r, y)))) p x                                                -- Assumption
+= (\(r,y) -> (r, snd (f (r, y)))) g p                                                -- free Theorem
+= g ((\(r,y) -> (r,  snd (f (r,y)))) . p)                                            -- rewrite (.)
+= g (\x -> (\(r,y) -> (r,  snd (f (r,y)))) (p x))                                    -- pull (p x) into lambda
+= g (\x -> (fst (p x),  snd (f (fst (p x) ,snd (p x)))))                             -- simplify tuple to p x
+= g (\x -> (fst (p x),  snd (f (p x))))                                              -- rewrite with (.)
+= g (\x -> ((fst . p) x, (snd . f . p) x))                                           -- expand first bit with theorem condition
+= g (\x -> ((fst . f . p) x, (snd . f . p) x))                                       -- simplify tuple to (f . p) x
+= g (\x -> (f . p) x)                                                                -- remove lambda
+= g (f . p)
+
+-}
 
 -- Theorem 1
 -- If q does apply p to get the r value but keeps the original value, 
@@ -129,28 +166,7 @@ bindK :: K r x -> (x -> K r y) -> K r y
 --    where q = (\x -> ((fst . p) x, x))
 
 -- (p . snd) (g q) = g (\x -> (p . snd) ((fst . p) x, x))
-
--- Proof: TODO!
-
--- Theorem 2
--- f :: (r,a) -> (r,b)
--- g :: K r x
--- p :: x -> (r,a)
--- f (g p) = g (f . p)
--- iff (fst . f . p) = fst . p
-
--- Should be proovable with the Free theorem for K and our assumption that g is not modifying the r value
-
--- Theorem Flase!!!! Counter example --{
-
-f' (1,x) = (10,x)
-f' x = x 
-g' p = if p 1 == (1,1) then (1,1) else p 2
-p' 1 = (1,1)
-p' 2 = (2,2) 
-
---}
-
+-- (p . snd) (g q) = g (p)
  
 
 
