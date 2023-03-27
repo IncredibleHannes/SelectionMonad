@@ -1,6 +1,8 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence)
+
 -- known selection monad
 type J r x = (x -> r) -> x
 
@@ -34,7 +36,7 @@ these K's are isomorpic to J
 -}
 
 bindK :: K r x -> (x -> K r y) -> K r y
---bindK f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))
+bindK f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))
 --equivalent by substitution
 --bindK f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))                                                         -- definition of bindJ
 --bindK f g = j2k ((\f g p -> g (f (p . flip g p)) p) (k2j f) (\x -> k2j (g x)))                            -- lambda application
@@ -59,51 +61,9 @@ bindK :: K r x -> (x -> K r y) -> K r y
 --bindK f g p = f ((\y -> g (snd y) p) . (\x -> (fst (g x p), x)))                                          -- def (.)    
 --bindK f g p = f (\x -> (\y -> g (snd y) p) (fst (g x p), x) )                                             -- apply lambda and simplify
 --bindK f g p = f (\x -> g x p)
---bindK f g = f . flip g 
 
 
--- ******************* Start alternative route *******************************
---bindK f g = j2k (\p -> k2j (g (k2j f (p . (\x -> k2j (g x) p)))) p)                                                               -- definition k2j
---bindK f g = j2k (\p -> k2j (g (k2j f (p . (\x -> (\f p ->  snd (f (\x -> (p x, x)))) (g x) p)))) p)                               -- lambda application
---bindK f g = j2k (\p -> k2j (g (k2j f (p . (\x -> snd ((g x) (\x -> (p x, x))))))) p)                                              -- definition k2j  
---bindK f g = j2k (\p -> k2j (g ((\f p ->  snd (f (\x -> (p x, x)))) f (p . (\x -> snd ((g x) (\x -> (p x, x))))))) p)              -- lambda application
---bindK f g = j2k (\p -> k2j (g (snd (f (\x -> ( (p . (\x -> snd ((g x) (\x -> (p x, x))))) x, x))))) p)                            -- definition (.)
---bindK f g = j2k (\p -> k2j (g (snd (f (\x -> ( p (snd ((g x) (\x -> (p x, x)))), x))))) p)                                        -- definition k2j    
---bindK f g = j2k (\p -> (\f p ->  snd (f (\x -> (p x, x)))) (g (snd (f (\x -> ( p (snd ((g x) (\x -> (p x, x)))), x))))) p)        -- lambda application
---bindK f g = j2k (\p -> snd (g (snd (f (\x -> ( p (snd ((g x) (\x -> (p x, x)))), x)))) (\x -> (p x, x))))                         -- definition j2k
---bindK f g = (\f p -> p (f (fst . p))) (\p -> snd (g (snd (f (\x -> ( p (snd ((g x) (\x -> (p x, x)))), x)))) (\x -> (p x, x))))   -- lambda application
---bindK f g = \p -> p ((\p -> snd (g (snd (f (\x -> ( p (snd ((g x) (\x -> (p x, x)))), x)))) (\x -> (p x, x)))) (fst . p))         -- removing outer lambda     
---bindK f g p = p ((\p -> snd (g (snd (f (\x -> ( p (snd ((g x) (\x -> (p x, x)))), x)))) (\x -> (p x, x)))) (fst . p))             -- lambda application
---bindK f g p = p (snd (g (snd (f (\x -> ((fst . p) (snd ((g x) (\x -> ((fst . p) x, x)))), x)))) (\x -> ((fst . p) x, x))))        -- rewrite (.)
--- bindK f g p = p (snd (g (snd (f (\x -> (fst ((p . snd) ((g x) (\x -> ((fst . p) x, x)))), x)))) (\x -> ((fst . p) x, x))))        -- Theorem 2
---bindK f g p = p (snd (g (snd (f (\x -> (fst ((g x) (p . snd . (\x -> ((fst . p) x, x)))), x)))) (\x -> ((fst . p) x, x))))        -- def (.)
---bindK f g p = p (snd (g (snd (f (\x -> (fst ((g x) (\x -> p (snd ((fst . p) x, x))))  , x)))) (\x -> ((fst . p) x, x))))          -- def snd
---bindK f g p = p (snd (g (snd (f (\x -> (fst ((g x) (\x -> p x)), x)))) (\x -> ((fst . p) x, x))))                                 -- remove lambda
---bindK f g p = p (snd (g (snd (f (\x -> (fst (g x p) , x)))) (\x -> ((fst . p) x, x))))                                            -- rewriting as lambda function
---bindK f g p = p (snd (g (snd (f (\x -> (\(r,y) -> (r,x)) (g x p)))) (\x -> ((fst . p) x, x))))                                    -- Theorem 2
---bindK f g p = p (snd (g (snd (f (\x -> g x ((\(r,y) -> (r,x)) . p)))) (\x -> ((fst . p) x, x))))                                  -- change lambda and def (.)
---bindK f g p = p (snd (g (snd (f (\x -> g x (\y -> (\z -> (fst z, x)) (p y))))) (\x -> ((fst . p) x, x))))                         -- apply lambda                              
---bindK f g p = p (snd (g (snd (f (\x -> g x (\y -> (fst (p y), x))))) (\x -> ((fst . p) x, x))))                                   -- theorem 1
---bindK f g p = g (snd (f(\x -> g x (\y -> (fst (p y), x) )))) p                                                                    -- rewrite with (.)
---bindK f g p = g (snd (f(\x -> g x (\y -> ((fst . p) y, x))))) p                                                                   -- rewrite g (snd (..)) as lambda
---bindK f g p = (\x y -> g (snd y) x) p ( f (\x -> (g x) (\y -> ((fst . p) y, x))))                                                 -- lambda application
---bindK f g p = (\y -> g (snd y) p) (f (\x -> (g x) (\y -> ((fst . p) y, x))))                                                      -- expand innermost lambda                                                     
---bindK f g p = (\y -> g (snd y) p) (f (\x -> (g x) (\y -> let (r,z) = p y in (r,x))))                                              -- todo: find theorem for this!!
---bindK f g p = (\(r,x) -> g x p)   (f (\x -> (g x) (\y -> let (r,z) = p y in (r,x))))                                              -- Theorem 2
---bindK f g p = f ((\(r,x) -> g x p) . (\x -> (g x) (\y -> let (r,z) = p y in (r,x))))                                              -- def (.)
---bindK f g p = f (\x -> (\(r,x) -> g x p) ((\x -> g x (\y -> let (r,z) = p y in (r,x))) x))                                        -- apply lambda
---bindK f g p = f (\x -> (\(r,y) -> g y p) ((g x) (\y -> let (r,z) = p y in (r,x))))                                                -- Theorem 2
---bindK f g p = f (\x -> g x ((\(r,y) -> g y p) . (\y -> let (r,z) = p y in (r,x))))                                                -- def (.)
---bindK f g p = f (\x -> g x (\y -> (\(r,y) -> g y p) ((\y -> let (r,z) = p y in (r,x))y) ))                                       -- apply lambda
---bindK f g p = f (\x -> g x (\y -> (\(r,y) -> g y p) (let (r,z) = p y in (r,x))))                                                  -- resolve patternmatch
---bindK f g p = f (\x -> g x (\y -> (\z -> g (snd z) p) (let (r,z) = p y in (r,x))))                                                -- apply lambda
---bindK f g p = f (\x -> g x (\y -> g (snd (let (r,z) = p y in (r,x))) p ))                                                         -- remove snd
---bindK f g p = f (\x -> g x (\y -> g x p ))                                                                                        -- Theorem 3
---bindK f g p = f (\x -> g x p)                                                                                                     -- simplify
---bindK f g = f . flip g 
-
-
-*********************** Theorems used in the substitution for bind ***********************
+-- *********************** Theorems used in the substitution for bind ***********************
 {-
 Assumption:
 g :: K r x
@@ -165,40 +125,142 @@ exists x ->                                                                     
 -- p (snd (g q)) = g p
 --    where q = (\x -> ((fst . p) x, x))
 
+-- proof with Theorem 2
 -- (p . snd) (g q) = g (\x -> (p . snd) ((fst . p) x, x))
--- (p . snd) (g q) = g (p)
+-- (p . snd) (g q) = g p
+-- 
+-- iff 
+-- (fst . p . snd) (\x -> ((fst . p) x, x))
+-- = \y -> (fst ( p (snd ( (\x -> ((fst . p) x, x)) y))))
+-- = \y -> (fst(p(snd ((fst . p) y, y) )))
+-- = \x -> (fst . p) x
+-- = fst . (\x -> ((fst . p) x, x)) 
  
 
-
--- Proof: TODO!
-
--- Theorem 3 
--- g :: K r x
--- p :: x -> (r,a)
--- g (\y -> g p) = g p
-
--- Proof: TODO!
-
 returnK :: x -> K r x
-returnK x = j2k (returnJ x)
+returnK' x = j2k (returnJ x)
 --equivalent by substitution
-returnK' x p = p x
+returnK x p = p x
 
 
--- Thoughts about potentially useful theorems: 
--- Theorem 4
--- g :: K r x 
--- f :: x -> y
--- p :: y -> (r,z)
--- g (p . f) = (\(r,x) -> p (f x)) (g (\x -> let (r,z) = p (f x) in (r,x)))
+sequence :: [K r x] -> K r [x]
+sequence [] p     = p []
+sequence (e:es) p = e (\x -> sequence es (\xs -> p (x:xs)))
 
--- theorem 5
--- p :: x -> (r,y)
--- f :: (r,y) -> z
--- g :: K r x 
--- f (g p) = snd g(\x -> let (r,y) = p x in (r,f(r,y))) 
+sequenceH :: [[x] -> K r x] -> [x] -> K r [x]
+sequenceH [] h p = p []
+sequenceH (e:es) h p = e h (\x -> sequenceH es (h ++ [x]) (\xs -> p (x:xs)))
 
--- theorem 6
--- p :: x -> (r,y)
--- g :: K r x
--- snd $ g (\x -> let (r,y) = p x in (r,(r,y))) = g p 
+foldMK :: (b -> a -> K r b) -> b -> [a] -> K r b
+foldMK f z0 []     = returnK z0
+foldMK f z0 (e:es) = bindK (f z0 e) (\y -> foldMK f y es)
+
+sequenceFK :: [K r x] -> K r [x]
+sequenceFK = foldMK f []
+    where 
+        f :: [x] -> K r x -> K r [x]
+        f b a p = a (\x -> p(b ++ [x]))
+
+sequenceBind :: [K r x] -> K r [x]
+sequenceBind [] = returnK []
+sequenceBind (e:es) = bindK e (\x -> bindK (sequenceBind es) (\xs -> returnK (x:xs)))
+
+--sequenceFKH :: [x] ->  [[x] -> K r x] -> K r [x]
+--sequenceFKH = foldMK f
+--    where 
+--        f :: [x] -> ([x] -> K r x) -> K r [x]
+--        f b a p = a b (\x -> p(b ++ [x]))
+
+
+-- examples
+
+minWith :: Ord r => forall y . [x] -> (x -> (r,y)) -> (r,y)
+minWith xs f = foldr1 (\(r,x) (s,y) -> if r < s then (r,x) else (s,y) ) (map f xs)
+
+maxWith :: Ord r => forall y . [x] -> (x -> (r,y)) -> (r,y)
+maxWith xs f = foldr1 (\(r,x) (s,y) -> if r > s then (r,x) else (s,y) ) (map f xs)
+
+
+n = 50
+
+p :: [Int] -> (Int, [Int])
+p x = (sum x, x)
+
+es :: [K Int Int]
+es = [e1,e2,e1,e2]
+  where 
+    e1 = minWith [1..n]
+    e2 = maxWith [1..n]
+
+test1 = sequence es p 
+test2 = sequenceFK es p
+test3 = sequenceBind es p 
+test4 = sequence' es p 
+test5 = sequence'' es p 
+
+-- \f g p -> f (\x -> g x p)
+
+sequence' :: [K r x] -> K r [x]
+sequence' [] p     = p []
+-- sequence' (e:es) = bindK e (\x -> bindK (sequence' es) (\xs -> returnK (x:xs)))
+-- sequence' (e:es) = \p -> e (\x -> (bindK (sequence' es) (\xs -> returnK (x:xs))) p)
+-- sequence' (e:es) = \p -> e (\x -> ((\p -> (sequence' es) (\xs -> (returnK (x:xs)) p))) p)
+-- sequence' (e:es) = \p -> e (\x -> ((\p -> (sequence' es) (\xs -> p (x:xs)))) p)
+-- sequence' (e:es) p = e (\x -> (\p -> sequence' es (\xs -> p (x:xs))) p)
+
+sequence' (e:es) p = e (\x -> sequence' es (\xs -> p (x:xs)))
+
+
+sequence'' :: [K r x] -> K r [x]
+sequence'' [] p     = p []
+sequence'' (e:es) p = p (a:as)
+    where (_,a) = e (\x -> (fst $ p (x : snd (sequence'' es (\y -> (fst $ p (x:y), y)))), x))
+          (_,as) = sequence'' es (\y -> (fst $ p (a:y), y))
+
+
+pairK :: K r x -> K r y -> K r (x,y)
+pairK f g p = f (\x -> g(\y -> p (x,y)))
+
+
+
+pairK' :: K r x -> K r y -> K r (x,y)
+--pairK' f g p = p (a,b)
+--    where (_,a) = f (\x -> (fst $ g (\y ->(fst $ p(x,y), y)), x))
+--          (_,b) = g (\y -> (fst $ p (a,y), y))
+
+--pairK' f g p = p (a,b)
+--    where (_,a) = f (\x -> (fst $ g (\y -> p(x,y)), x))
+--          (_,b) = g (\y -> (fst $ p (a,y), y))
+
+--pairK' f g p = let a = snd $ f (\x -> (fst $ g (\y -> p(x,y)), x)) in p (a,snd $ g (\y -> (fst $ p (a,y), y)))
+--pairK' f g p = p (snd $ f (\x -> (fst $ g (\y -> p(x,y)), x)), snd $ g (\y -> (fst $ p (snd $ f (\x -> (fst $ g (\y -> p(x,y)), x)),y), y)))
+
+--pairK' f g p = curry p (snd $ f (\x -> (fst $ g (\y -> p(x,y)), x))) (snd $ g (\y -> (fst $ p (snd $ f (\x -> (fst $ g (\y -> p(x,y)), x)),y), y)))
+
+--pairK' f g p = g (curry p (snd $ f (\x -> (fst $ g (\y -> p(x,y)), x))))
+--pairK' f g p = g (\x -> (curry p) (snd $ f (\x -> (fst $ g (\y -> p(x,y)), x))) x)
+--pairK' f g p = g (\y -> p (snd $ f (\x -> (fst $ g (\y -> p(x,y)), x)), y) )
+
+pairK' f g p = g (\y -> p (snd $ f (\x -> (fst $ g (\y -> p(x,y)), x)), y) )
+--pairK' f g p = g (\y -> p (snd $ f (\x -> (fst $ p (x,y), x)), y) )
+
+
+--pairK' f g p = g (\y -> p (snd (f (\x -> (fst (p (x,y)) , x))),y))
+--pairK' f g p = g (\y -> (\x -> p (x,y)) (snd (f (\x -> (fst (p (x,y)) , x)))))
+--pairK' f g p = g (\y -> (\x -> p (x,y)) (snd (f (\x -> ((fst . (\x -> p (x,y))) x, x)))))   -- Theorem 1
+--pairK' f g p = g (\y -> f (\x -> p (x,y)))
+
+{--
+Theorem 2
+f :: (r,a) -> (r,b)
+g :: K r x
+p :: x -> (r,a)
+f (g p) = g (f . p)
+
+iff (fst . f . p) = fst . p
+
+Theorem 1
+p (snd (g q)) = g p
+    where q = (\x -> ((fst . p) x, x))
+
+--}
