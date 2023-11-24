@@ -1,0 +1,600 @@
+% This is samplepaper.tex, a sample chapter demonstrating the
+% LLNCS macro package for Springer Computer Science proceedings;
+% Version 2.20 of 2017/10/04
+%
+\documentclass[runningheads]{llncs}
+\usepackage{graphicx}
+
+
+\begin{document}
+
+\title{Generalised Selection Monad}
+
+\author{
+    Johannes Hartmann\inst{1} \and 
+    Tom Schrijvers\inst{2}\and 
+    Jeremy Gibbons\inst{1}
+}
+%
+\authorrunning{J. Hartmann, T. Schrijvers, J. Gibbons}
+
+\institute{
+    University of Oxford, Department of Computer Science, UK
+    \email{firstname.lastname@cs.ox.ac.uk}\and 
+    KULeuven, DepartmentofComputerScience, Belgium,
+    \email{tom.schrijvers@kuleuven.be}
+}
+
+%
+\maketitle              % typeset the header of the contribution
+%
+\begin{abstract}
+General setup and introduction words here
+
+\keywords{Selection monad  \and Functional programming \and Algorithm design \and 
+Performance Optimisation \and Monads.}
+\end{abstract}
+%
+%
+%
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{\{{-}\# LANGUAGE ImpredicativeTypes \#{-}\}}
+\OtherTok{\{{-}\# LANGUAGE ScopedTypeVariables \#{-}\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{import} \DataTypeTok{Prelude} \KeywordTok{hiding}\NormalTok{ ((\textgreater{}\textgreater{}=), return, pure, (\textless{}*\textgreater{}), fmap, sequence, }\DataTypeTok{Left}\NormalTok{, }\DataTypeTok{Right}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Introduction to the Selection
+Monad}\label{introduction-to-the-selection-monad}
+
+This section introduces the selection monad, focusing on the
+\texttt{type\ J\ r\ a\ =\ (a\ -\textgreater{}\ r)\ -\textgreater{}\ a}
+for selection functions. The \texttt{pair} function is explored,
+showcasing its capability to compute new selection functions based on
+criteria from two existing functions. Illustrated with a practical
+example, the decision-making scenarios involving individuals navigating
+paths underscore the functionality of selection functions.
+
+An analysis of the inefficiency in the original \texttt{pair} function
+identifies redundant computational work. The primary contribution of the
+paper is then outlined: an illustration and proposal for an efficient
+solution to enhance \texttt{pair} function performance. This
+introductory overview sets the stage for a detailed exploration of the
+selection monad and subsequent discussions on optimizations.
+
+\subsection{Selection functions}\label{selection-functions}
+
+Consider the tollowing already know type for selection functions:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{type} \DataTypeTok{J}\NormalTok{ r a }\OtherTok{=}\NormalTok{ (a }\OtherTok{{-}\textgreater{}}\NormalTok{ r) }\OtherTok{{-}\textgreater{}}\NormalTok{ a}
+\end{Highlighting}
+\end{Shaded}
+
+When given two selection functions, a \texttt{pair} function can be
+defined to compute a new selection function. This resultant function
+selects a pair based on the criteria established by the two given
+selection functions:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{pair ::} \DataTypeTok{J}\NormalTok{ r a }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r b }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r (a,b)}
+\NormalTok{pair f g p }\OtherTok{=}\NormalTok{ (a,b)}
+  \KeywordTok{where}
+\NormalTok{      a }\OtherTok{=}\NormalTok{ f (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ p (x, g (\textbackslash{}y }\OtherTok{{-}\textgreater{}}\NormalTok{ p (x,y))))}
+\NormalTok{      b }\OtherTok{=}\NormalTok{ g (\textbackslash{}y }\OtherTok{{-}\textgreater{}}\NormalTok{ p (a,y))}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Example to illustrate the pair
+function}\label{example-to-illustrate-the-pair-function}
+
+To gain a deeper understanding of the provided \texttt{pair} function,
+consider the following example. Picture two individuals walking on a
+path, one heading north and the other south. As they proceed, a
+collision is imminent. At this juncture, each individual must make a
+decision regarding their next move. This decision-making process can be
+modeled using selection functions. The decision they need to make is
+modeled as either going right or left:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{data} \DataTypeTok{Decision} \OtherTok{=} \DataTypeTok{Left} \OperatorTok{|} \DataTypeTok{Right}
+\end{Highlighting}
+\end{Shaded}
+
+The respective selection functions decide given a predicate that tells
+them what decision is the correct one, select the correct one, and if
+there is no correct one, they default to walking right.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p1,}\OtherTok{ p2 ::} \DataTypeTok{J} \DataTypeTok{Bool} \DataTypeTok{Decision}
+\NormalTok{p1 p }\OtherTok{=} \KeywordTok{if}\NormalTok{ p }\DataTypeTok{Left} \KeywordTok{then} \DataTypeTok{Left} \KeywordTok{else} \DataTypeTok{Right}
+\NormalTok{p2 p }\OtherTok{=} \KeywordTok{if}\NormalTok{ p }\DataTypeTok{Left} \KeywordTok{then} \DataTypeTok{Left} \KeywordTok{else} \DataTypeTok{Right}
+\end{Highlighting}
+\end{Shaded}
+
+To apply the \texttt{pair} function, a predicate \texttt{pred} is needed
+that will judge two decisions and return \texttt{True} if a crash would
+be avoided and \texttt{False} otherwise.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{pred}\OtherTok{ ::}\NormalTok{ (}\DataTypeTok{Decision}\NormalTok{, }\DataTypeTok{Decision}\NormalTok{) }\OtherTok{{-}\textgreater{}} \DataTypeTok{Bool}
+\FunctionTok{pred}\NormalTok{ (}\DataTypeTok{Left}\NormalTok{,}\DataTypeTok{Right}\NormalTok{) }\OtherTok{=} \DataTypeTok{True}
+\FunctionTok{pred}\NormalTok{ (}\DataTypeTok{Right}\NormalTok{,}\DataTypeTok{Left}\NormalTok{) }\OtherTok{=} \DataTypeTok{True}
+\FunctionTok{pred}\NormalTok{ \_            }\OtherTok{=} \DataTypeTok{False}
+\end{Highlighting}
+\end{Shaded}
+
+With the \texttt{pair} function, the merging of the two selection
+functions into a new one that identifies an optimal decision can now be
+calculated.
+
+\begin{verbatim}
+pair p1 p2 pred
+--> (Left,Right)
+\end{verbatim}
+
+Examining how the \texttt{pair} function is defined reveals that the
+first element \texttt{a} of the pair is determined by applying the
+initial selection function \texttt{f} to a newly constructed property
+function. Intuitively, selection functions can be conceptualized as
+entities containing a collection of objects, waiting for a property
+function to assess their underlying elements. Once equipped with a
+property function, they can apply it to their elements and select an
+optimal one.
+
+Considering the types assigned to selection functions, it is evident
+that an initial selection function \texttt{f} remains in anticipation of
+a property function of type \texttt{(a\ -\textgreater{}\ r)} to
+determine an optimal \texttt{a}. The \texttt{pair} function is endowed
+with a property function \texttt{p\ ::\ ((a,b)\ -\textgreater{}\ r)}.
+Through the utilization of this property function, a property function
+for \texttt{f} can be derived by using the second selection function
+\texttt{g} to select a corresponding \texttt{b} and subsequently
+applying \texttt{p} to assess \texttt{(a,b)} pairs as follows:
+\texttt{(\textbackslash{}x\ -\textgreater{}\ p\ (x,\ g\ (\textbackslash{}y\ -\textgreater{}\ p\ (x,y))))}.
+Upon the determination of an optimal \texttt{a}, a corresponding
+\texttt{b} can then be computed as
+\texttt{g\ (\textbackslash{}y\ -\textgreater{}\ p\ (a,y))}.
+
+In this case, the \texttt{pair} function can be conceptualized as a
+function that constructs all possible combinations of the elements
+within the provided selection function and subsequently identifies the
+overall optimal one.
+
+It might feel intuitive to consider the following modified \texttt{pair}
+function that seems to be more symmetric.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{pair\textquotesingle{} ::} \DataTypeTok{J}\NormalTok{ r a }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r b }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r (a,b)}
+\NormalTok{pair\textquotesingle{} f g p }\OtherTok{=}\NormalTok{ (a,b)}
+  \KeywordTok{where}
+\NormalTok{      a }\OtherTok{=}\NormalTok{ f (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ p (x, g (\textbackslash{}y }\OtherTok{{-}\textgreater{}}\NormalTok{ p (x,y))))}
+\NormalTok{      b }\OtherTok{=}\NormalTok{ g (\textbackslash{}y }\OtherTok{{-}\textgreater{}}\NormalTok{ p (f (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ p (x,y)), y))}
+\end{Highlighting}
+\end{Shaded}
+
+However, applying this modified \texttt{pair\textquotesingle{}} to our
+previous example this results in a overall non optimal solution.
+
+\begin{verbatim}
+pair' p1 p2 pred
+--> (Left,Left)
+\end{verbatim}
+
+This illustrates how the original \texttt{pair} function keeps track of
+its first decision when determining its second element. It is noteworthy
+that, in the example example, achieving a satisfying outcome for both
+pedestrians is only possible when they consider the direction the other
+one is heading. The specific destination does not matter, as long as
+they are moving in different directions. Consequently, the original
+\texttt{pair} function can be conceived as a function that selects the
+optimal solution while retaining awareness of previous solutions,
+whereas our modified \texttt{pair\textquotesingle{}} does not.
+
+An issue with the original \texttt{pair} function might have been
+identified by the attentive reader. There is redundant computational
+work involved. Initially, all possible pairs are constructed to
+determine an optimal first element \texttt{a}, but the corresponding
+\texttt{b} that renders it an overall optimal solution is overlooked,
+resulting in only \texttt{a} being returned. Subsequently, the optimal
+\texttt{b} is recalculated based on the already determined optimal
+\texttt{a} when selecting the second element of the pair.
+
+The primary contribution of this paper will be to illustrate and propose
+a solution to this inefficiency.
+
+\subsection{Sequence}\label{sequence}
+
+The generalization of the pair function to accommodate a sequence of
+selection functions is the initial focus of exploration. In the context
+of selection functions, a \texttt{sequence} operation is introduced,
+capable of combining a list of selection functions into a singular
+selection function that, in turn, selects a list of objects:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sequence}\OtherTok{ ::}\NormalTok{ [}\DataTypeTok{J}\NormalTok{ r a] }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r [a]}
+\FunctionTok{sequence}\NormalTok{ [] p     }\OtherTok{=}\NormalTok{ []}
+\FunctionTok{sequence}\NormalTok{ (e}\OperatorTok{:}\NormalTok{es) p }\OtherTok{=}\NormalTok{ a }\OperatorTok{:}\NormalTok{ as}
+  \KeywordTok{where} 
+\NormalTok{      a  }\OtherTok{=}\NormalTok{ e (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ p (x }\OperatorTok{:} \FunctionTok{sequence}\NormalTok{ es (p }\OperatorTok{.}\NormalTok{ (x}\OperatorTok{:}\NormalTok{))))}
+\NormalTok{      as }\OtherTok{=} \FunctionTok{sequence}\NormalTok{ es (p }\OperatorTok{.}\NormalTok{ (a}\OperatorTok{:}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+Here, similar to the pair function, the sequence function extracts
+elements from the resulting list through the corresponding selection
+functions. This extraction is achieved by applying each function to a
+newly constructed property function that possesses the capability to
+foresee the future, thereby constructing an optimal future based on the
+currently examined element.
+
+However, a notable inefficiency persists, exacerbating the issue
+observed in the pair function. During the determination of the first
+element, the \texttt{sequence} function calculates an optimal remainder
+of the list, only to overlook it and redundantly perform the same
+calculation for subsequent elements. This inefficiency in
+\texttt{sequence} warrants further investigation for potential
+optimization in subsequent sections of this research paper.
+
+\subsection{Selection monad}\label{selection-monad}
+
+The formation of a monad within the selection functions unfolds as
+follows:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{(\textgreater{}\textgreater{}=) ::} \DataTypeTok{J}\NormalTok{ r a }\OtherTok{{-}\textgreater{}}\NormalTok{ (a }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r b) }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r b}
+\NormalTok{(}\OperatorTok{\textgreater{}\textgreater{}=}\NormalTok{) f g p }\OtherTok{=}\NormalTok{ g (f (p }\OperatorTok{.} \FunctionTok{flip}\NormalTok{ g p)) p}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{return}\OtherTok{ ::}\NormalTok{ a }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r a}
+\FunctionTok{return}\NormalTok{ x p }\OtherTok{=}\NormalTok{ x}
+\end{Highlighting}
+\end{Shaded}
+
+These definitions illustrate the monadic structure inherent in selection
+functions. The Haskell standard library already incorporates a built-in
+function for monads, referred to as \texttt{sequence\textquotesingle{}},
+defined as:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{sequence\textquotesingle{} ::}\NormalTok{ [}\DataTypeTok{J}\NormalTok{ r a] }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r [a]}
+\NormalTok{sequence\textquotesingle{} (ma}\OperatorTok{:}\NormalTok{mas) }\OtherTok{=}\NormalTok{ ma }\OperatorTok{\textgreater{}\textgreater{}=}\NormalTok{ \textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ sequence\textquotesingle{} mas }\OperatorTok{\textgreater{}\textgreater{}=}\NormalTok{ \textbackslash{}xs }\OtherTok{{-}\textgreater{}} \FunctionTok{return}\NormalTok{ (x}\OperatorTok{:}\NormalTok{xs)}
+\end{Highlighting}
+\end{Shaded}
+
+Notably, in the case of the selection monad, this built-in
+\texttt{sequence\textquotesingle{}} function aligns with the earlier
+provided \texttt{sequence} implementation. This inherent consistency
+further solidifies the monadic nature of selection functions,
+underscoring their alignment with established Haskell conventions.
+
+\subsection{Illustration of Sequence in the Context of Selection
+Functions}\label{illustration-of-sequence-in-the-context-of-selection-functions}
+
+To ilustrate the application of the sequence function within the domain
+of selection functions, consider a practical scenario: the task of
+cracking a secret password. In this hypothetical situation, a black box
+predicate \texttt{p} is provided that returns \texttt{True} if the
+correct password is entered and \texttt{False} otherwise. Additionally,
+knowledge is assumed that the password is six characters long:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{p ::} \DataTypeTok{String} \OtherTok{{-}\textgreater{}} \DataTypeTok{Bool}
+\NormalTok{p }\StringTok{"secret"} \OtherTok{=} \DataTypeTok{True}
+\NormalTok{p \_        }\OtherTok{=} \DataTypeTok{False}
+\end{Highlighting}
+\end{Shaded}
+
+Suppose access is available to a \texttt{maxWith} function, defined as:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{maxWith ::} \DataTypeTok{Ord}\NormalTok{ r }\OtherTok{=\textgreater{}}\NormalTok{ [a] }\OtherTok{{-}\textgreater{}}\NormalTok{ (a }\OtherTok{{-}\textgreater{}}\NormalTok{ r) }\OtherTok{{-}\textgreater{}}\NormalTok{ a}
+\NormalTok{maxWith [x] f                      }\OtherTok{=}\NormalTok{ x}
+\NormalTok{maxWith (x}\OperatorTok{:}\NormalTok{y}\OperatorTok{:}\NormalTok{xs) f }\OperatorTok{|}\NormalTok{ (f x) }\OperatorTok{\textgreater{}}\NormalTok{ (f y) }\OtherTok{=}\NormalTok{ maxWith (x}\OperatorTok{:}\NormalTok{xs) f}
+                   \OperatorTok{|} \FunctionTok{otherwise}     \OtherTok{=}\NormalTok{ maxWith (y}\OperatorTok{:}\NormalTok{xs) f}
+\end{Highlighting}
+\end{Shaded}
+
+With these resources, a selection function denoted as
+\texttt{selectChar} can be constructed, which, given a predicate that
+evaluates each character, selects a single character satisfying the
+specified predicate:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{selectChar ::} \DataTypeTok{J} \DataTypeTok{Bool} \DataTypeTok{Char}
+\NormalTok{selectChar }\OtherTok{=}\NormalTok{ maxWith [}\CharTok{\textquotesingle{}a\textquotesingle{}}\OperatorTok{..}\CharTok{\textquotesingle{}z\textquotesingle{}}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+It's worth noting that the use of maxWith is facilitated by the ordered
+nature of booleans in Haskell, where \texttt{True} is considered greater
+than \texttt{False}. Leveraging this selection function, the sequence
+function can be employed on a list comprising six identical copies of
+\texttt{selectChar} to successfully crack the secret password. Each
+instance of the selection function focuses on a specific character of
+the secret password:
+
+\begin{verbatim}
+sequence (replicate 6 selectChar) p
+-> "secret"
+\end{verbatim}
+
+This illustrative example not only showcases the practical application
+of the \texttt{sequence} function within the domain of selection
+functions but also emphasizes its utility in addressing real-world
+problems, such as scenarios involving password cracking. Notably, there
+is no need to explicitly specify a predicate for judging individual
+character; rather, this predicate is constructed within the monads bind
+definition, and its utilization is facilitated through the application
+of the \texttt{sequence} function.
+
+Additionally, attention should be drawn to the fact that this example
+involves redundant calculations. Upon determining the first character of
+the secret password, the system neglects the prior calculation of the
+entire password and recommences the calculation for subsequent
+characters. This inefficiency, observed in the current implementation,
+will be addressed through the proposal of a new type for selection
+functions in the subsequent section.
+
+\subsection{More efficient special K}\label{more-efficient-special-k}
+
+In order to adress this secific inefficiency of the selection monad with
+the \texttt{pair} and \texttt{sequence} function we will introduce two
+new variations of the selection monad. First, we will have a look at a
+new type K that will turn out to be isomorphic to the selection monad
+\texttt{J}. Then we will further generalise this \texttt{K} type to be
+more intuitive to work whith. It turns out that the J monad can be
+embedded into this genaralised K type.
+
+\section{Special K}\label{special-k}
+
+Lets consider the following type K:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{type} \DataTypeTok{K}\NormalTok{ r a }\OtherTok{=} \KeywordTok{forall}\NormalTok{ b}\OperatorTok{.}\NormalTok{ (a }\OtherTok{{-}\textgreater{}}\NormalTok{ (r,b)) }\OtherTok{{-}\textgreater{}}\NormalTok{ b}
+\end{Highlighting}
+\end{Shaded}
+
+While selection functions of type J are still waiting for a predicate
+that is able to judge its underlaying elements, the new K type works
+similar. The predicate of the K type also judges its elements by turning
+them into r values, but further also converts the x into any y, and
+returns that y along with its judgement r.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{pairK ::} \DataTypeTok{K}\NormalTok{ r a }\OtherTok{{-}\textgreater{}} \DataTypeTok{K}\NormalTok{ r b }\OtherTok{{-}\textgreater{}} \DataTypeTok{K}\NormalTok{ r (a,b)}
+\NormalTok{pairK f g p }\OtherTok{=}\NormalTok{ f (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ g (\textbackslash{}y }\OtherTok{{-}\textgreater{}} \KeywordTok{let}\NormalTok{ (r, z) }\OtherTok{=}\NormalTok{ p (x,y) }\KeywordTok{in}\NormalTok{ (r, (r,z))))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\item
+  ilustrate on an example how that is more efficient - Basically because
+  once it found a solution, the whole solution will be returned, and can
+  be reused
+\item
+  This is sequence for the new K type.
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{sequenceK ::}\NormalTok{ [}\DataTypeTok{K}\NormalTok{ r a] }\OtherTok{{-}\textgreater{}} \DataTypeTok{K}\NormalTok{ r [a]}
+\NormalTok{sequenceK [e] p    }\OtherTok{=}\NormalTok{ e (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ p [x])}
+\NormalTok{sequenceK (e}\OperatorTok{:}\NormalTok{es) p }\OtherTok{=}\NormalTok{ e (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ sequenceK es (\textbackslash{}xs }\OtherTok{{-}\textgreater{}} \KeywordTok{let}\NormalTok{ (r,y) }\OtherTok{=}\NormalTok{ p (x}\OperatorTok{:}\NormalTok{xs) }\KeywordTok{in}\NormalTok{ (r,(r,y))))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\tightlist
+\item
+  state that it has the same efficiency advantages
+\end{itemize}
+
+\subsection{Special K isomorphic to J}\label{special-k-isomorphic-to-j}
+
+\begin{itemize}
+\tightlist
+\item
+  Give k2j and j2k
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{k2j ::} \DataTypeTok{K}\NormalTok{ r a }\OtherTok{{-}\textgreater{}} \DataTypeTok{J}\NormalTok{ r a}
+\NormalTok{k2j f p }\OtherTok{=}\NormalTok{ f (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ (p x, x)) }
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{j2k ::} \DataTypeTok{J}\NormalTok{ r a }\OtherTok{{-}\textgreater{}} \DataTypeTok{K}\NormalTok{ r a}
+\NormalTok{j2k f p }\OtherTok{=} \FunctionTok{snd}\NormalTok{ (p (f (}\FunctionTok{fst} \OperatorTok{.}\NormalTok{ p)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\item
+  intoduce free theorem for special K
+\item
+  proof that they are isomorphic
+\item
+  End with a final point that this is complicated to deal with! Lots of
+  unpacking
+\end{itemize}
+
+\subsection{Generalised K}\label{generalised-k}
+
+\begin{itemize}
+\tightlist
+\item
+  what we really want is the generalised K
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{type} \DataTypeTok{GK}\NormalTok{ r x }\OtherTok{=} \KeywordTok{forall}\NormalTok{ y}\OperatorTok{.}\NormalTok{ (x }\OtherTok{{-}\textgreater{}}\NormalTok{ (r,y)) }\OtherTok{{-}\textgreater{}}\NormalTok{ (r,y)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\tightlist
+\item
+  give the intuitive monad definition for new K
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{bindGK ::} \DataTypeTok{GK}\NormalTok{ r a }\OtherTok{{-}\textgreater{}}\NormalTok{ (a }\OtherTok{{-}\textgreater{}} \DataTypeTok{GK}\NormalTok{ r b) }\OtherTok{{-}\textgreater{}} \DataTypeTok{GK}\NormalTok{ r b}
+\NormalTok{bindGK e f p }\OtherTok{=}\NormalTok{ e (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ f x p)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{returnGK ::}\NormalTok{ a }\OtherTok{{-}\textgreater{}} \DataTypeTok{GK}\NormalTok{ r a}
+\NormalTok{returnGK x p }\OtherTok{=}\NormalTok{ p x}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\tightlist
+\item
+  give pair and sequence
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{pairGK ::} \DataTypeTok{GK}\NormalTok{ r a }\OtherTok{{-}\textgreater{}} \DataTypeTok{GK}\NormalTok{ r b }\OtherTok{{-}\textgreater{}} \DataTypeTok{GK}\NormalTok{ r (a,b)}
+\NormalTok{pairGK f g p }\OtherTok{=}\NormalTok{ f (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ g (\textbackslash{}y }\OtherTok{{-}\textgreater{}}\NormalTok{ p (x,y)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{sequenceGK ::}\NormalTok{ [}\DataTypeTok{GK}\NormalTok{ r a] }\OtherTok{{-}\textgreater{}} \DataTypeTok{GK}\NormalTok{ r [a]}
+\NormalTok{sequenceGK [e] p    }\OtherTok{=}\NormalTok{ e (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ p [x])}
+\NormalTok{sequenceGK (e}\OperatorTok{:}\NormalTok{es) p }\OtherTok{=}\NormalTok{ e (\textbackslash{}x }\OtherTok{{-}\textgreater{}}\NormalTok{ sequenceGK es (\textbackslash{}xs }\OtherTok{{-}\textgreater{}}\NormalTok{ p (x}\OperatorTok{:}\NormalTok{xs)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\tightlist
+\item
+  ilustrate how nice it is to deal with
+\end{itemize}
+
+\subsection{Relationship to J and Special
+K}\label{relationship-to-j-and-special-k}
+
+\begin{itemize}
+\tightlist
+\item
+  Show that generalised K is an embedding
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{k2gk ::} \DataTypeTok{K}\NormalTok{ r a }\OtherTok{{-}\textgreater{}} \DataTypeTok{GK}\NormalTok{ r a}
+\NormalTok{k2gk f }\OtherTok{=} \FunctionTok{snd} \OperatorTok{.}\NormalTok{ f}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{gk2k ::} \DataTypeTok{GK}\NormalTok{ r a }\OtherTok{{-}\textgreater{}} \DataTypeTok{K}\NormalTok{ r a}
+\NormalTok{gk2k f p }\OtherTok{=}\NormalTok{  f (\textbackslash{}x }\OtherTok{{-}\textgreater{}} \KeywordTok{let}\NormalTok{ (r,y) }\OtherTok{=}\NormalTok{ p x }\KeywordTok{in}\NormalTok{ (r, (r,y)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\tightlist
+\item
+  intoduce free theorem and precondition
+\item
+  counterexamples to ilustrate what precondition means and why we want
+  it
+\item
+  introduce new theorem baced on free theorem and precondition
+\item
+  calculate monad definition from k2j and j2k
+\end{itemize}
+
+\section{Performance analisys}\label{performance-analisys}
+
+\begin{itemize}
+\tightlist
+\item
+  give some perfomance analysis examples that ilustrate improvement
+\end{itemize}
+
+\section{Related work}\label{related-work}
+
+J was researched in the context of Sequential games, but slowly found
+its way to other applications
+
+\section{Outlook and future work}\label{outlook-and-future-work}
+
+\begin{itemize}
+\tightlist
+\item
+  Need to investigate further whats possible with the more general type
+\item
+  Alpha beta pruning as next step of my work
+\end{itemize}
+
+\section{Conclusion}\label{conclusion}
+
+\begin{itemize}
+\tightlist
+\item
+  We should use generalised K istead of J because more useful and more
+  intuitive once understood
+\item
+  performance improvements are useful
+\item
+  monad pair and sequence implementation much more intuitive and useful
+\end{itemize}
+
+\section{Appendix}\label{appendix}
+
+Proofs!
+
+%
+% ---- Bibliography ----
+%
+% BibTeX users should specify bibliography style 'splncs04'.
+% References will then be sorted and formatted in the correct style.
+%
+% \bibliographystyle{splncs04}
+% \bibliography{mybibliography}
+%
+\bibliographystyle{splncs04}
+\bibliography{bib}
+
+\newpage
+\section*{Appendix}
+\appendix
+\end{document}

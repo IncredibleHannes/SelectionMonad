@@ -1,17 +1,19 @@
 
+
 > {-# LANGUAGE ImpredicativeTypes #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
 
 
 > import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, Left, Right)
 
-Generalised Selection monad
-=============================
+---
+title: Generalised Selection Monad
+---
 
-Abstract
-========
-
-General setup and introduction words here....
+---
+abstract:
+  General setup and introduction words here
+---
 
 Introduction to the Selection Monad
 ===================================
@@ -22,11 +24,11 @@ compute new selection functions based on criteria from two existing functions. I
 with a practical example, the decision-making scenarios involving individuals navigating 
 paths underscore the functionality of selection functions.
 
-An analysis of the inefficiency in the original `pair` function identifies redundant computational 
-work. The primary contribution of the paper is then outlined: an illustration and proposal 
-for an efficient solution to enhance `pair` function performance. This introductory overview 
-sets the stage for a detailed exploration of the selection monad and subsequent discussions 
-on optimizations.
+An analysis of the inefficiency in the original `pair` function identifies redundant 
+computational work. The primary contribution of the paper is then outlined: an 
+illustration and proposal for an efficient solution to enhance `pair` function 
+performance. This introductory overview sets the stage for a detailed exploration of the 
+selection monad and subsequent discussions on optimizations.
 
 Selection functions
 -------------------
@@ -52,8 +54,8 @@ To gain a deeper understanding of the provided `pair` function, consider the fol
 example. Picture two individuals walking on a path, one heading north and the other south. 
 As they proceed, a collision is imminent. At this juncture, each individual must make a 
 decision regarding their next move. This decision-making process can be modeled using 
-selection functions.
-The decision they need to make is modeled as either going right or left:
+selection functions. The decision they need to make is modeled as either going right or 
+left:
 
 > data Decision = Left | Right
 
@@ -81,25 +83,25 @@ pair p1 p2 pred
 --> (Left,Right)
 ```
 
-Examining how the `pair` function is defined reveals that the first element `a` of the pair is 
-determined by applying the initial selection function `f` to a newly constructed property 
-function. Intuitively, selection functions can be conceptualized as entities containing a 
-collection of objects, waiting for a property function to assess their underlying elements. 
-Once equipped with a property function, they can apply it to their elements and select an 
-optimal one.
+Examining how the `pair` function is defined reveals that the first element `a` of the 
+pair is determined by applying the initial selection function `f` to a newly constructed 
+property function. Intuitively, selection functions can be conceptualized as entities 
+containing a collection of objects, waiting for a property function to assess their 
+underlying elements. Once equipped with a property function, they can apply it to their 
+elements and select an optimal one.
 
 Considering the types assigned to selection functions, it is evident that an initial 
 selection function `f` remains in anticipation of a property function of type `(a -> r)` 
 to determine an optimal `a`. The `pair` function is endowed with a property function 
-`p :: ((a,b) -> r)`. Through the utilization of this property function, a property function 
-for `f` can be derived by using the second selection function `g` to select a 
+`p :: ((a,b) -> r)`. Through the utilization of this property function, a property 
+function for `f` can be derived by using the second selection function `g` to select a 
 corresponding `b` and subsequently applying `p` to assess `(a,b)` pairs as follows:
 `(\x -> p (x, g (\y -> p (x,y))))`. 
 Upon the determination of an optimal `a`, a corresponding `b` can then be computed as 
 `g (\y -> p (a,y))`.
 
-In this case, the `pair` function can be conceptualized as a function that constructs 
-all possible combinations of the elements within the provided selection function and 
+In this case, the `pair` function can be conceptualized as a function that constructs all 
+possible combinations of the elements within the provided selection function and 
 subsequently identifies the overall optimal one.
 
 It might feel intuitive to consider the following modified `pair` function that 
@@ -141,7 +143,7 @@ Sequence
 --------
 
 The generalization of the pair function to accommodate a sequence of selection functions 
-is the initial focus of exploration. In the context of selection functions, a sequence 
+is the initial focus of exploration. In the context of selection functions, a `sequence` 
 operation is introduced, capable of combining a list of selection functions into a 
 singular selection function that, in turn, selects a list of objects:
 
@@ -152,22 +154,23 @@ singular selection function that, in turn, selects a list of objects:
 >       a  = e (\x -> p (x : sequence es (p . (x:))))
 >       as = sequence es (p . (a:))
 
-Here, similar to the pair function, the sequence function extracts elements from the resulting 
-list through the corresponding selection functions. This extraction is achieved by applying 
-each function to a newly constructed property function that possesses the capability to 
-foresee the future, thereby constructing an optimal future based on the currently examined 
-element.
+Here, similar to the pair function, the sequence function extracts elements from the 
+resulting list through the corresponding selection functions. This extraction is achieved 
+by applying each function to a newly constructed property function that possesses the 
+capability to foresee the future, thereby constructing an optimal future based on the 
+currently examined element.
 
-However, a notable inefficiency persists, exacerbating the issue observed in the pair function. 
-During the determination of the first element, the sequence function calculates an optimal 
-remainder of the list, only to overlook it and redundantly perform the same calculation for 
-subsequent elements. This inefficiency in sequence warrants further investigation for potential 
-optimization in subsequent sections of this research paper.
+However, a notable inefficiency persists, exacerbating the issue observed in the pair 
+function. During the determination of the first element, the `sequence` function 
+calculates an optimal remainder of the list, only to overlook it and redundantly perform 
+the same calculation for subsequent elements. This inefficiency in `sequence` warrants 
+further investigation for potential optimization in subsequent sections of this research 
+paper.
 
 Selection monad
 ---------------
 
-Selection functions are forming a monad in the following way:
+The formation of a monad within the selection functions unfolds as follows:
 
 > (>>=) :: J r a -> (a -> J r b) -> J r b
 > (>>=) f g p = g (f (p . flip g p)) p
@@ -175,31 +178,79 @@ Selection functions are forming a monad in the following way:
 > return :: a -> J r a
 > return x p = x
 
-The haskell standard library already has a build-in sequence functon for 
-monads:
+These definitions illustrate the monadic structure inherent in selection functions. The 
+Haskell standard library already incorporates a built-in function for monads, referred to 
+as `sequence'`, defined as:
 
 > sequence' :: [J r a] -> J r [a]
 > sequence' (ma:mas) = ma >>= \x -> sequence' mas >>= \xs -> return (x:xs)
 
-Which in the case for the selection monad is equivalent to the previous given
-sequence implementation. 
+Notably, in the case of the selection monad, this built-in `sequence'` function aligns 
+with the earlier provided `sequence` implementation. This inherent consistency further 
+solidifies the monadic nature of selection functions, underscoring their alignment with 
+established Haskell conventions. 
 
-Example
--------
 
-- TODO: give another example to ilustrate how we can model decisions with the selection monad
-(Password example)
+Illustration of Sequence in the Context of Selection Functions
+--------------------------------------------------------------
 
+To ilustrate the application of the sequence function within the domain of selection 
+functions, consider a practical scenario: the task of cracking a secret password. In this 
+hypothetical situation, a black box predicate `p` is provided that returns `True` if the 
+correct password is entered and `False` otherwise. Additionally, knowledge is assumed that
+the password is six characters long:
+
+> p :: String -> Bool
+> p "secret" = True
+> p _        = False
+
+Suppose access is available to a `maxWith` function, defined as:
+
+> maxWith :: Ord r => [a] -> (a -> r) -> a
+> maxWith [x] f                      = x
+> maxWith (x:y:xs) f | (f x) > (f y) = maxWith (x:xs) f
+>                    | otherwise     = maxWith (y:xs) f
+
+With these resources, a selection function denoted as `selectChar` can be constructed, 
+which, given a predicate that evaluates each character, selects a single character 
+satisfying the specified predicate:
+
+> selectChar :: J Bool Char
+> selectChar = maxWith ['a'..'z']
+
+It's worth noting that the use of maxWith is facilitated by the ordered nature of booleans
+in Haskell, where `True` is considered greater than `False`. Leveraging this selection 
+function, the sequence function can be employed on a list comprising six identical copies 
+of `selectChar` to successfully crack the secret password. Each instance of the selection 
+function focuses on a specific character of the secret password:
+
+```
+sequence (replicate 6 selectChar) p
+-> "secret"
+```
+
+This illustrative example not only showcases the practical application of the `sequence` 
+function within the domain of selection functions but also emphasizes its utility in 
+addressing real-world problems, such as scenarios involving password cracking. Notably, 
+there is no need to explicitly specify a predicate for judging individual character; 
+rather, this predicate is constructed within the monads bind definition, and its 
+utilization is facilitated through the application of the `sequence` function.
+
+Additionally, attention should be drawn to the fact that this example involves redundant 
+calculations. Upon determining the first character of the secret password, the system 
+neglects the prior calculation of the entire password and recommences the calculation for 
+subsequent characters. This inefficiency, observed in the current implementation, will be 
+addressed through the proposal of a new type for selection functions in the subsequent 
+section.
 
 More efficient special K
 ------------------------
 
-In order to adress this secific inefficiency of the selection monad with the
-pair and sequence function we will introduce two new variations of the selection
-monad. First, we will have a look at a new type K that will turn out to be 
-isomorphic to the selection monad J. Then we will further generalise this K type
-to be more intuitive to work whith. It turns out that the J monad can be embedded
-into this genaralised K type. 
+In order to adress this secific inefficiency of the selection monad with the `pair` and 
+`sequence` function we will introduce two new variations of the selection monad. First, we
+will have a look at a new type K that will turn out to be isomorphic to the selection 
+monad `J`. Then we will further generalise this `K` type to be more intuitive to work 
+whith. It turns out that the J monad can be embedded into this genaralised K type. 
 
 Special K
 =========

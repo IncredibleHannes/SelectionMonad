@@ -1,0 +1,7 @@
+input-file: GeneralisedSelectionMonad.lhs
+
+from: markdown+literate_haskell
+
+output-file: ./LatexOutput/GeneralisedSelectionMonad.tex
+
+template: ./LatexOutput/template.tex
