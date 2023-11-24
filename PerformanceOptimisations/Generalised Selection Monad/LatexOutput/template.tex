@@ -3,7 +3,17 @@
 % Version 2.20 of 2017/10/04
 %
 \documentclass[runningheads]{llncs}
-\usepackage{graphicx}
+
+\usepackage{listings}
+\usepackage{textcomp}
+\usepackage[english]{babel}
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\lstnewenvironment{code}{\lstset{language=Haskell,basicstyle=\small\ttfamily}}{}
+\lstnewenvironment{haskell}{\lstset{language=Haskell,basicstyle=\small\ttfamily}}{}
+\newcommand{\ignore}[1]{}
 
 
 \begin{document}

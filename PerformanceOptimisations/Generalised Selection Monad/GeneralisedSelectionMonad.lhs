@@ -1,10 +1,10 @@
-
-
 > {-# LANGUAGE ImpredicativeTypes #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
 
-
 > import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, Left, Right)
+
+\ignore{
+}
 
 ---
 title: Generalised Selection Monad
@@ -23,7 +23,6 @@ for selection functions. The `pair` function is explored, showcasing its capabil
 compute new selection functions based on criteria from two existing functions. Illustrated 
 with a practical example, the decision-making scenarios involving individuals navigating 
 paths underscore the functionality of selection functions.
-
 An analysis of the inefficiency in the original `pair` function identifies redundant 
 computational work. The primary contribution of the paper is then outlined: an 
 illustration and proposal for an efficient solution to enhance `pair` function 
@@ -89,7 +88,6 @@ property function. Intuitively, selection functions can be conceptualized as ent
 containing a collection of objects, waiting for a property function to assess their 
 underlying elements. Once equipped with a property function, they can apply it to their 
 elements and select an optimal one.
-
 Considering the types assigned to selection functions, it is evident that an initial 
 selection function `f` remains in anticipation of a property function of type `(a -> r)` 
 to determine an optimal `a`. The `pair` function is endowed with a property function 
@@ -99,11 +97,9 @@ corresponding `b` and subsequently applying `p` to assess `(a,b)` pairs as follo
 `(\x -> p (x, g (\y -> p (x,y))))`. 
 Upon the determination of an optimal `a`, a corresponding `b` can then be computed as 
 `g (\y -> p (a,y))`.
-
 In this case, the `pair` function can be conceptualized as a function that constructs all 
 possible combinations of the elements within the provided selection function and 
 subsequently identifies the overall optimal one.
-
 It might feel intuitive to consider the following modified `pair` function that 
 seems to be more symmetric.
 
@@ -128,14 +124,12 @@ direction the other one is heading. The specific destination does not matter, as
 as they are moving in different directions. Consequently, the original `pair` function 
 can be conceived as a function that selects the optimal solution while retaining 
 awareness of previous solutions, whereas our modified `pair'` does not.
-
 An issue with the original `pair` function might have been identified by the attentive 
 reader. There is redundant computational work involved. Initially, all possible pairs 
 are constructed to determine an optimal first element `a`, but the corresponding `b` 
 that renders it an overall optimal solution is overlooked, resulting in only `a` being 
 returned. Subsequently, the optimal `b` is recalculated based on the already determined 
 optimal `a` when selecting the second element of the pair.
-
 The primary contribution of this paper will be to illustrate and propose a solution to 
 this inefficiency.
 
@@ -159,7 +153,6 @@ resulting list through the corresponding selection functions. This extraction is
 by applying each function to a newly constructed property function that possesses the 
 capability to foresee the future, thereby constructing an optimal future based on the 
 currently examined element.
-
 However, a notable inefficiency persists, exacerbating the issue observed in the pair 
 function. During the determination of the first element, the `sequence` function 
 calculates an optimal remainder of the list, only to overlook it and redundantly perform 
@@ -183,7 +176,9 @@ Haskell standard library already incorporates a built-in function for monads, re
 as `sequence'`, defined as:
 
 > sequence' :: [J r a] -> J r [a]
-> sequence' (ma:mas) = ma >>= \x -> sequence' mas >>= \xs -> return (x:xs)
+> sequence' (ma:mas) = ma >>= 
+>                     \x -> sequence' mas >>= 
+>                     \xs -> return (x:xs)
 
 Notably, in the case of the selection monad, this built-in `sequence'` function aligns 
 with the earlier provided `sequence` implementation. This inherent consistency further 
@@ -235,74 +230,190 @@ addressing real-world problems, such as scenarios involving password cracking. N
 there is no need to explicitly specify a predicate for judging individual character; 
 rather, this predicate is constructed within the monads bind definition, and its 
 utilization is facilitated through the application of the `sequence` function.
-
 Additionally, attention should be drawn to the fact that this example involves redundant 
-calculations. Upon determining the first character of the secret password, the system 
-neglects the prior calculation of the entire password and recommences the calculation for 
-subsequent characters. This inefficiency, observed in the current implementation, will be 
-addressed through the proposal of a new type for selection functions in the subsequent 
-section.
-
-More efficient special K
-------------------------
-
-In order to adress this secific inefficiency of the selection monad with the `pair` and 
-`sequence` function we will introduce two new variations of the selection monad. First, we
-will have a look at a new type K that will turn out to be isomorphic to the selection 
-monad `J`. Then we will further generalise this `K` type to be more intuitive to work 
-whith. It turns out that the J monad can be embedded into this genaralised K type. 
+calculations. After determining the first character of the secret password, the system 
+overlooks the prior computation of the entire password and initiates the calculation anew 
+for subsequent characters.
+To address this specific inefficiency within the selection monad, concerning the pair and 
+sequence functions, two new variations of the selection monad will be introduced. 
+Initially, an examination of a new type, denoted as `K`, will reveal its isomorphism to 
+the selection monad `J`. Subsequently, an exploration of the generalization of this `K` 
+type will enhance its intuitive usability. Remarkably, it will be demonstrated that the 
+`J` monad can be embedded into this generalized `K` type.
 
 Special K
 =========
 
-Lets consider the following type K:
+The following type `K` is to be considered:
 
 > type K r a = forall b. (a -> (r,b)) -> b
 
-While selection functions of type J are still waiting for a predicate that
-is able to judge its underlaying elements, the new K type works similar.
-The predicate of the K type also judges its elements by turning them into r
-values, but further also converts the x into any y, and returns that y along
-with its judgement r.
+While selection functions of type `J` are still in anticipation of a predicate capable of 
+judging their underlying elements, a similar operation is performed by the new `K` type. 
+The predicate of the `K` type also assesses its elements by transforming them into `r` 
+values. Additionally, it converts the `x` into any `y` and returns that `y` along with 
+its judgment `r`.
 
 > pairK :: K r a -> K r b -> K r (a,b)
-> pairK f g p = f (\x -> g (\y -> let (r, z) = p (x,y) in (r, (r,z))))
+> pairK f g p = f (\x -> 
+>               g (\y -> let (r, z) = p (x,y) 
+>                        in (r, (r,z))))
 
-- ilustrate on an example how that is more efficient
-      - Basically because once it found a solution, the whole solution will be returned, and can be reused
+The previously mentioned inefficiency is now addressed by the definition of `pairK`. This 
+is achieved by examining every element `x` in the selection function `f.` For each 
+element, a corresponding result is extracted from the second selection function `g.` 
+Utilizing the additional flexibility provided by the new `K` type, the property function 
+for `g` is now constructed differently. Instead of merely returning the result `z` along 
+with the corresponding `r` value, a duplicate of the entire result pair calculated by `p` 
+is generated and returned. As this duplicate already represents the complete solution, the 
+entire result for an optimal `x` can now be straightforwardly yielded by `f,` eliminating 
+the need for additional computations.
 
-- This is sequence for the new K type.
+The sequenceK for this novel K type can be defined as follows:
 
 > sequenceK :: [K r a] -> K r [a]
 > sequenceK [e] p    = e (\x -> p [x])
-> sequenceK (e:es) p = e (\x -> sequenceK es (\xs -> let (r,y) = p (x:xs) in (r,(r,y))))
+> sequenceK (e:es) p = e (\x -> sequenceK es 
+>                        (\xs -> let (r,y) = p (x:xs) 
+>                                in (r,(r,y))))
 
-- state that it has the same efficiency advantages
+This `sequenceK` implementation employs the same strategy as the earlier `pairK` function. 
+It essentially generates duplicates of the entire solution pair, returning these in place 
+of the result value. The selection function one layer above then unpacks the result pair, 
+allowing the entire solution to be propagated.
+The efficiency issues previously outlined are addressed by these novel `pairK` and 
+`sequenceK` functions. It will be further demonstrated that this fresh `K` type is 
+isomorphic to the preceding `J` type. This essentially empowers the transformation of 
+every problem previously solved with the `J` type into the world of the `K` type. 
+Subsequently, the solutions can be computed more efficiently before being transformed back 
+to express them in terms of `J`.
 
-Special K isomorphic to J
--------------------------
+Special K is isomorphic to J
+----------------------------
 
-- Give k2j and j2k
-
-> k2j :: K r a -> J r a
-> k2j f p = f (\x -> (p x, x)) 
+To demonstrate the isomorphism between the new Special `K` type and the `J` type, two 
+operators are introduced for transforming from one type to the other:
 
 > j2k :: J r a -> K r a
 > j2k f p = snd (p (f (fst . p)))
 
-- intoduce free theorem for special K
-- proof that they are isomorphic
+When provided with a selection function `f` of type `J r a`, the `j2k` operator constructs 
+an entity of type `K r a`. For a given `f :: (a -> r) -> a` and 
+`p :: forall b. (a -> (r,b))`, the objective is to return an entity of type `b`. This is 
+achieved by initially extracting an a from `f` using the constructed property function 
+`(fst . p)`. Subsequently, this a is employed to apply `p`, yielding an `(r,b)` pair, from 
+which the `b` is obtained by applying `snd` to the pair.
+The transformation of a selection function of type `K` into a selection function of type 
+`J` is accomplished as follows:
 
-- End with a final point that this is complicated to deal with! Lots of unpacking
+> k2j :: K r a -> J r a
+> k2j f p = f (\x -> (p x, x)) 
+
+Given a selection function `f :: forall b. (a -> (r,b)) -> b` and a `p :: (a -> r) -> a`, 
+an `a` can be directly extracted from `f` by constructing a property function that 
+utilizes `p` to obtain an `r` value while leaving the corresponding `x` of type a 
+untouched.
+To validate that these two operators indeed establish an isomorphism between `J` and `K`, 
+the following equations must be proven: `(k2j . j2k) f = f` and `(j2k . k2j) g = g`.
+
+\begin{proof}
+The equality (k2j . j2k) f = f can be straightforwardly demonstrated by applying all the 
+lambdas and the definitions of fst and snd:
+
+\begin{haskell}
+(k2j . j2k) f
+-- {{ Apply definitions}}
+= (\f p -> f (\x -> (p x, x))) (\p -> snd (p (f (fst . p))))
+-- {{ Simplyfy }}
+= f
+\end{haskell}
+
+\end{proof}
+
+This proof involves a direct application of lambda expressions and the definitions of 
+`fst` and `snd` for simplification. To facilitate the proof of the second isomorphism, we 
+initially introduce the free theorem for the special K type:
+
+\begin{theorem}[Free Theorem for `K`]
+Given the following functions with thier corrisponding types:
+
+\begin{haskell}
+g :: forall y. (x -> (r, y)) -> y
+h :: Y1 -> Y2
+p :: x -> (r, Y1)
+\end{haskell}
+
+We have:
+
+\begin{haskell}
+h (g p) = g (\x -> (id *** g) (p x))
+\end{haskell}
+
+\end{theorem}
+
+With the free theorem for `K`, the other half of the isomorphism can now be proven as 
+follows:
+
+\begin{proof}
+The equality (j2k . k2j) g = g is established through the following steps:
+
+\begin{haskell}
+(j2k . k2j) g
+-- {{ Apply definitions and simplify}}
+= \p -> snd (p (g (\x -> ((fst . p) x, x))))
+-- {{ Free Theorem for K }}
+= \p -> g (\x -> ((fst . p) x, (snd . p) x))
+-- {{ Simplify }}
+= g
+\end{haskell}
+
+\end{proof}
+
+The monad definitions and `sequence` definition for the new `K` type can be derived from 
+the isomorphism. While the desired performance improvements are achieved by the definition
+of `K`, significant data structure copying is required, only to be deconstructed and 
+discarded at a higher layer. This process significantly complicates the associated 
+definitions for `sequence` and `pair`, rendering them challenging to handle and lacking in 
+intuitiveness.
+Introducing another type, `GK`, that returns the entire tuple rather than just the result 
+value seems more intuitive. This exploration is detailed in the following chapter, where 
+similar performance improvements are observed with `GK` while the definitions become more 
+straightforward. This approach also eliminates the need for unnecessary copying of data. 
+However, it is revealed that `GK` is not isomorphic to `J` and `K`; instead, they can be 
+embedded into `GK`. Conversely, we will explore a specific precondition under which `GK` 
+can be embedded into `J` or `K`.
 
 Generalised K
--------------
+=============
 
-- what we really want is the generalised K
+Consider the more general type `GK`, derived from the previous special `K` type:
 
-> type GK r x = forall y. (x -> (r,y)) -> (r,y)
+> type GK r a = forall b. (a -> (r,b)) -> (r,b)
 
-- give the intuitive monad definition for new K
+Unlike its predecessor, `GK` returns the entire pair produced by the predicate, rather 
+than just the result value. The implementation of `pairGK` for the new `GK` type no longer 
+necessitates the creation of a copy of the data structure. It suffices to return the 
+result of the predicate's application to the complete pair:
+
+> pairGK :: GK r a -> GK r b -> GK r (a,b)
+> pairGK f g p = f (\x -> g (\y -> p (x,y)))
+
+In terms of readability, this definition of pairGK is significantly more concise, 
+conveying the essence of the `pair` function without unnecessary boilerplate code. For 
+every element `x :: a` within `f`, all `y :: b` within `g` are inspected and judged by the 
+given predicate `p`. The resulting pair selection function returns the optimal pair of 
+`(a,b)` values according to the provided predicate.
+Furthermore, we define `sequenceGK` as follows:
+
+> sequenceGK :: [GK r a] -> GK r [a]
+> sequenceGK [e] p    = e (\x -> p [x])
+> sequenceGK (e:es) p = e (\x -> sequenceGK es (\xs -> p (x:xs)))
+
+Following a similar pattern, this `sequenceGK` function builds all possible futures for 
+each element within `e`. Once an optimal list of elements is found, this list is simply 
+returned along with the corresponding `r` value.
+
+Even further, the monad definition for `GK` is straightforward:
 
 > bindGK :: GK r a -> (a -> GK r b) -> GK r b
 > bindGK e f p = e (\x -> f x p)
@@ -310,14 +421,6 @@ Generalised K
 > returnGK :: a -> GK r a
 > returnGK x p = p x
 
-- give pair and sequence
-
-> pairGK :: GK r a -> GK r b -> GK r (a,b)
-> pairGK f g p = f (\x -> g (\y -> p (x,y)))
-
-> sequenceGK :: [GK r a] -> GK r [a]
-> sequenceGK [e] p    = e (\x -> p [x])
-> sequenceGK (e:es) p = e (\x -> sequenceGK es (\xs -> p (x:xs)))
 
 - ilustrate how nice it is to deal with
 
@@ -326,12 +429,12 @@ Relationship to J and Special K
 
 - Show that generalised K is an embedding
 
+> gk2k :: forall r a b. ((a -> (r,b)) -> (r,b)) -> ((a -> (r,b)) -> b)
+> gk2k f = snd . f
+
+
 > k2gk :: K r a -> GK r a
-> k2gk f = snd . f
-
-
-> gk2k :: GK r a -> K r a
-> gk2k f p =  f (\x -> let (r,y) = p x in (r, (r,y)))
+> k2gk f p = f (\x -> let (r,y) = p x in (r, (r,y)))
 
 - intoduce free theorem and precondition
 - counterexamples to ilustrate what precondition means and why we want it
@@ -366,4 +469,4 @@ Conclusion
 Appendix
 ========
 
-Proofs!
+Proofs!\cite{escardo2010sequential}
