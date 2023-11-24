@@ -1,0 +1,292 @@
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ot">{-# LANGUAGE ImpredicativeTypes #-}</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ot">{-# LANGUAGE ScopedTypeVariables #-}</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="dt">Prelude</span> <span class="kw">hiding</span> ((&gt;&gt;=), return, pure, (&lt;*&gt;), fmap, sequence, <span class="dt">Left</span>, <span class="dt">Right</span>)</span></code></pre></div>
+<h1 id="generalised-selection-monad">Generalised Selection monad</h1>
+<h1 id="abstract">Abstract</h1>
+<p>General setup and introduction words here….</p>
+<h1 id="introduction-to-the-selection-monad">Introduction to the
+Selection Monad</h1>
+<p>This section introduces the selection monad, focusing on the
+<code>type J r a = (a -&gt; r) -&gt; a</code> for selection functions.
+The <code>pair</code> function is explored, showcasing its capability to
+compute new selection functions based on criteria from two existing
+functions. Illustrated with a practical example, the decision-making
+scenarios involving individuals navigating paths underscore the
+functionality of selection functions.</p>
+<p>An analysis of the inefficiency in the original <code>pair</code>
+function identifies redundant computational work. The primary
+contribution of the paper is then outlined: an illustration and proposal
+for an efficient solution to enhance <code>pair</code> function
+performance. This introductory overview sets the stage for a detailed
+exploration of the selection monad and subsequent discussions on
+optimizations.</p>
+<h2 id="selection-functions">Selection functions</h2>
+<p>Consider the tollowing already know type for selection functions:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> <span class="dt">J</span> r a <span class="ot">=</span> (a <span class="ot">-&gt;</span> r) <span class="ot">-&gt;</span> a</span></code></pre></div>
+<p>When given two selection functions, a <code>pair</code> function can
+be defined to compute a new selection function. This resultant function
+selects a pair based on the criteria established by the two given
+selection functions:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ot">pair ::</span> <span class="dt">J</span> r a <span class="ot">-&gt;</span> <span class="dt">J</span> r b <span class="ot">-&gt;</span> <span class="dt">J</span> r (a,b)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>pair f g p <span class="ot">=</span> (a,b)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>      a <span class="ot">=</span> f (\x <span class="ot">-&gt;</span> p (x, g (\y <span class="ot">-&gt;</span> p (x,y))))</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>      b <span class="ot">=</span> g (\y <span class="ot">-&gt;</span> p (a,y))</span></code></pre></div>
+<h2 id="example-to-illustrate-the-pair-function">Example to illustrate
+the pair function</h2>
+<p>To gain a deeper understanding of the provided <code>pair</code>
+function, consider the following example. Picture two individuals
+walking on a path, one heading north and the other south. As they
+proceed, a collision is imminent. At this juncture, each individual must
+make a decision regarding their next move. This decision-making process
+can be modeled using selection functions. The decision they need to make
+is modeled as either going right or left:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">data</span> <span class="dt">Decision</span> <span class="ot">=</span> <span class="dt">Left</span> <span class="op">|</span> <span class="dt">Right</span></span></code></pre></div>
+<p>The respective selection functions decide given a predicate that
+tells them what decision is the correct one, select the correct one, and
+if there is no correct one, they default to walking right.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>p1,<span class="ot"> p2 ::</span> <span class="dt">J</span> <span class="dt">Bool</span> <span class="dt">Decision</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>p1 p <span class="ot">=</span> <span class="kw">if</span> p <span class="dt">Left</span> <span class="kw">then</span> <span class="dt">Left</span> <span class="kw">else</span> <span class="dt">Right</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>p2 p <span class="ot">=</span> <span class="kw">if</span> p <span class="dt">Left</span> <span class="kw">then</span> <span class="dt">Left</span> <span class="kw">else</span> <span class="dt">Right</span></span></code></pre></div>
+<p>To apply the <code>pair</code> function, a predicate
+<code>pred</code> is needed that will judge two decisions and return
+<code>True</code> if a crash would be avoided and <code>False</code>
+otherwise.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pred</span><span class="ot"> ::</span> (<span class="dt">Decision</span>, <span class="dt">Decision</span>) <span class="ot">-&gt;</span> <span class="dt">Bool</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">pred</span> (<span class="dt">Left</span>,<span class="dt">Right</span>) <span class="ot">=</span> <span class="dt">True</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">pred</span> (<span class="dt">Right</span>,<span class="dt">Left</span>) <span class="ot">=</span> <span class="dt">True</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">pred</span> _            <span class="ot">=</span> <span class="dt">False</span></span></code></pre></div>
+<p>With the <code>pair</code> function, the merging of the two selection
+functions into a new one that identifies an optimal decision can now be
+calculated.</p>
+<pre><code>pair p1 p2 pred
+--&gt; (Left,Right)</code></pre>
+<p>Examining how the <code>pair</code> function is defined reveals that
+the first element <code>a</code> of the pair is determined by applying
+the initial selection function <code>f</code> to a newly constructed
+property function. Intuitively, selection functions can be
+conceptualized as entities containing a collection of objects, waiting
+for a property function to assess their underlying elements. Once
+equipped with a property function, they can apply it to their elements
+and select an optimal one.</p>
+<p>Considering the types assigned to selection functions, it is evident
+that an initial selection function <code>f</code> remains in
+anticipation of a property function of type <code>(a -&gt; r)</code> to
+determine an optimal <code>a</code>. The <code>pair</code> function is
+endowed with a property function <code>p :: ((a,b) -&gt; r)</code>.
+Through the utilization of this property function, a property function
+for <code>f</code> can be derived by using the second selection function
+<code>g</code> to select a corresponding <code>b</code> and subsequently
+applying <code>p</code> to assess <code>(a,b)</code> pairs as follows:
+<code>(\x -&gt; p (x, g (\y -&gt; p (x,y))))</code>. Upon the
+determination of an optimal <code>a</code>, a corresponding
+<code>b</code> can then be computed as
+<code>g (\y -&gt; p (a,y))</code>.</p>
+<p>In this case, the <code>pair</code> function can be conceptualized as
+a function that constructs all possible combinations of the elements
+within the provided selection function and subsequently identifies the
+overall optimal one.</p>
+<p>It might feel intuitive to consider the following modified
+<code>pair</code> function that seems to be more symmetric.</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ot">pair&#39; ::</span> <span class="dt">J</span> r a <span class="ot">-&gt;</span> <span class="dt">J</span> r b <span class="ot">-&gt;</span> <span class="dt">J</span> r (a,b)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>pair&#39; f g p <span class="ot">=</span> (a,b)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>      a <span class="ot">=</span> f (\x <span class="ot">-&gt;</span> p (x, g (\y <span class="ot">-&gt;</span> p (x,y))))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>      b <span class="ot">=</span> g (\y <span class="ot">-&gt;</span> p (f (\x <span class="ot">-&gt;</span> p (x,y)), y))</span></code></pre></div>
+<p>However, applying this modified <code>pair'</code> to our previous
+example this results in a overall non optimal solution.</p>
+<pre><code>pair&#39; p1 p2 pred
+--&gt; (Left,Left)</code></pre>
+<p>This illustrates how the original <code>pair</code> function keeps
+track of its first decision when determining its second element. It is
+noteworthy that, in the example example, achieving a satisfying outcome
+for both pedestrians is only possible when they consider the direction
+the other one is heading. The specific destination does not matter, as
+long as they are moving in different directions. Consequently, the
+original <code>pair</code> function can be conceived as a function that
+selects the optimal solution while retaining awareness of previous
+solutions, whereas our modified <code>pair'</code> does not.</p>
+<p>An issue with the original <code>pair</code> function might have been
+identified by the attentive reader. There is redundant computational
+work involved. Initially, all possible pairs are constructed to
+determine an optimal first element <code>a</code>, but the corresponding
+<code>b</code> that renders it an overall optimal solution is
+overlooked, resulting in only <code>a</code> being returned.
+Subsequently, the optimal <code>b</code> is recalculated based on the
+already determined optimal <code>a</code> when selecting the second
+element of the pair.</p>
+<p>The primary contribution of this paper will be to illustrate and
+propose a solution to this inefficiency.</p>
+<h2 id="sequence">Sequence</h2>
+<p>The generalization of the pair function to accommodate a sequence of
+selection functions is the initial focus of exploration. In the context
+of selection functions, a sequence operation is introduced, capable of
+combining a list of selection functions into a singular selection
+function that, in turn, selects a list of objects:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sequence</span><span class="ot"> ::</span> [<span class="dt">J</span> r a] <span class="ot">-&gt;</span> <span class="dt">J</span> r [a]</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sequence</span> [] p     <span class="ot">=</span> []</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sequence</span> (e<span class="op">:</span>es) p <span class="ot">=</span> a <span class="op">:</span> as</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span> </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>      a  <span class="ot">=</span> e (\x <span class="ot">-&gt;</span> p (x <span class="op">:</span> <span class="fu">sequence</span> es (p <span class="op">.</span> (x<span class="op">:</span>))))</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>      as <span class="ot">=</span> <span class="fu">sequence</span> es (p <span class="op">.</span> (a<span class="op">:</span>))</span></code></pre></div>
+<p>Here, similar to the pair function, the sequence function extracts
+elements from the resulting list through the corresponding selection
+functions. This extraction is achieved by applying each function to a
+newly constructed property function that possesses the capability to
+foresee the future, thereby constructing an optimal future based on the
+currently examined element.</p>
+<p>However, a notable inefficiency persists, exacerbating the issue
+observed in the pair function. During the determination of the first
+element, the sequence function calculates an optimal remainder of the
+list, only to overlook it and redundantly perform the same calculation
+for subsequent elements. This inefficiency in sequence warrants further
+investigation for potential optimization in subsequent sections of this
+research paper.</p>
+<h2 id="selection-monad">Selection monad</h2>
+<p>Selection functions are forming a monad in the following way:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ot">(&gt;&gt;=) ::</span> <span class="dt">J</span> r a <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">J</span> r b) <span class="ot">-&gt;</span> <span class="dt">J</span> r b</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>(<span class="op">&gt;&gt;=</span>) f g p <span class="ot">=</span> g (f (p <span class="op">.</span> <span class="fu">flip</span> g p)) p</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">return</span><span class="ot"> ::</span> a <span class="ot">-&gt;</span> <span class="dt">J</span> r a</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">return</span> x p <span class="ot">=</span> x</span></code></pre></div>
+<p>The haskell standard library already has a build-in sequence functon
+for monads:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ot">sequence&#39; ::</span> [<span class="dt">J</span> r a] <span class="ot">-&gt;</span> <span class="dt">J</span> r [a]</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>sequence&#39; (ma<span class="op">:</span>mas) <span class="ot">=</span> ma <span class="op">&gt;&gt;=</span> \x <span class="ot">-&gt;</span> sequence&#39; mas <span class="op">&gt;&gt;=</span> \xs <span class="ot">-&gt;</span> <span class="fu">return</span> (x<span class="op">:</span>xs)</span></code></pre></div>
+<p>Which in the case for the selection monad is equivalent to the
+previous given sequence implementation.</p>
+<h2 id="example">Example</h2>
+<ul>
+<li>TODO: give another example to ilustrate how we can model decisions
+with the selection monad (Password example)</li>
+</ul>
+<h2 id="more-efficient-special-k">More efficient special K</h2>
+<p>In order to adress this secific inefficiency of the selection monad
+with the pair and sequence function we will introduce two new variations
+of the selection monad. First, we will have a look at a new type K that
+will turn out to be isomorphic to the selection monad J. Then we will
+further generalise this K type to be more intuitive to work whith. It
+turns out that the J monad can be embedded into this genaralised K
+type.</p>
+<h1 id="special-k">Special K</h1>
+<p>Lets consider the following type K:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> <span class="dt">K</span> r a <span class="ot">=</span> <span class="kw">forall</span> b<span class="op">.</span> (a <span class="ot">-&gt;</span> (r,b)) <span class="ot">-&gt;</span> b</span></code></pre></div>
+<p>While selection functions of type J are still waiting for a predicate
+that is able to judge its underlaying elements, the new K type works
+similar. The predicate of the K type also judges its elements by turning
+them into r values, but further also converts the x into any y, and
+returns that y along with its judgement r.</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ot">pairK ::</span> <span class="dt">K</span> r a <span class="ot">-&gt;</span> <span class="dt">K</span> r b <span class="ot">-&gt;</span> <span class="dt">K</span> r (a,b)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>pairK f g p <span class="ot">=</span> f (\x <span class="ot">-&gt;</span> g (\y <span class="ot">-&gt;</span> <span class="kw">let</span> (r, z) <span class="ot">=</span> p (x,y) <span class="kw">in</span> (r, (r,z))))</span></code></pre></div>
+<ul>
+<li><p>ilustrate on an example how that is more efficient - Basically
+because once it found a solution, the whole solution will be returned,
+and can be reused</p></li>
+<li><p>This is sequence for the new K type.</p></li>
+</ul>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ot">sequenceK ::</span> [<span class="dt">K</span> r a] <span class="ot">-&gt;</span> <span class="dt">K</span> r [a]</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>sequenceK [e] p    <span class="ot">=</span> e (\x <span class="ot">-&gt;</span> p [x])</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>sequenceK (e<span class="op">:</span>es) p <span class="ot">=</span> e (\x <span class="ot">-&gt;</span> sequenceK es (\xs <span class="ot">-&gt;</span> <span class="kw">let</span> (r,y) <span class="ot">=</span> p (x<span class="op">:</span>xs) <span class="kw">in</span> (r,(r,y))))</span></code></pre></div>
+<ul>
+<li>state that it has the same efficiency advantages</li>
+</ul>
+<h2 id="special-k-isomorphic-to-j">Special K isomorphic to J</h2>
+<ul>
+<li>Give k2j and j2k</li>
+</ul>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="ot">k2j ::</span> <span class="dt">K</span> r a <span class="ot">-&gt;</span> <span class="dt">J</span> r a</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>k2j f p <span class="ot">=</span> f (\x <span class="ot">-&gt;</span> (p x, x)) </span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="ot">j2k ::</span> <span class="dt">J</span> r a <span class="ot">-&gt;</span> <span class="dt">K</span> r a</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>j2k f p <span class="ot">=</span> <span class="fu">snd</span> (p (f (<span class="fu">fst</span> <span class="op">.</span> p)))</span></code></pre></div>
+<ul>
+<li><p>intoduce free theorem for special K</p></li>
+<li><p>proof that they are isomorphic</p></li>
+<li><p>End with a final point that this is complicated to deal with!
+Lots of unpacking</p></li>
+</ul>
+<h2 id="generalised-k">Generalised K</h2>
+<ul>
+<li>what we really want is the generalised K</li>
+</ul>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> <span class="dt">GK</span> r x <span class="ot">=</span> <span class="kw">forall</span> y<span class="op">.</span> (x <span class="ot">-&gt;</span> (r,y)) <span class="ot">-&gt;</span> (r,y)</span></code></pre></div>
+<ul>
+<li>give the intuitive monad definition for new K</li>
+</ul>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ot">bindGK ::</span> <span class="dt">GK</span> r a <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">GK</span> r b) <span class="ot">-&gt;</span> <span class="dt">GK</span> r b</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>bindGK e f p <span class="ot">=</span> e (\x <span class="ot">-&gt;</span> f x p)</span></code></pre></div>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="ot">returnGK ::</span> a <span class="ot">-&gt;</span> <span class="dt">GK</span> r a</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>returnGK x p <span class="ot">=</span> p x</span></code></pre></div>
+<ul>
+<li>give pair and sequence</li>
+</ul>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="ot">pairGK ::</span> <span class="dt">GK</span> r a <span class="ot">-&gt;</span> <span class="dt">GK</span> r b <span class="ot">-&gt;</span> <span class="dt">GK</span> r (a,b)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>pairGK f g p <span class="ot">=</span> f (\x <span class="ot">-&gt;</span> g (\y <span class="ot">-&gt;</span> p (x,y)))</span></code></pre></div>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="ot">sequenceGK ::</span> [<span class="dt">GK</span> r a] <span class="ot">-&gt;</span> <span class="dt">GK</span> r [a]</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>sequenceGK [e] p    <span class="ot">=</span> e (\x <span class="ot">-&gt;</span> p [x])</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>sequenceGK (e<span class="op">:</span>es) p <span class="ot">=</span> e (\x <span class="ot">-&gt;</span> sequenceGK es (\xs <span class="ot">-&gt;</span> p (x<span class="op">:</span>xs)))</span></code></pre></div>
+<ul>
+<li>ilustrate how nice it is to deal with</li>
+</ul>
+<h2 id="relationship-to-j-and-special-k">Relationship to J and Special
+K</h2>
+<ul>
+<li>Show that generalised K is an embedding</li>
+</ul>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="ot">k2gk ::</span> <span class="dt">K</span> r a <span class="ot">-&gt;</span> <span class="dt">GK</span> r a</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>k2gk f <span class="ot">=</span> <span class="fu">snd</span> <span class="op">.</span> f</span></code></pre></div>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode haskell literate"><code class="sourceCode haskell"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ot">gk2k ::</span> <span class="dt">GK</span> r a <span class="ot">-&gt;</span> <span class="dt">K</span> r a</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>gk2k f p <span class="ot">=</span>  f (\x <span class="ot">-&gt;</span> <span class="kw">let</span> (r,y) <span class="ot">=</span> p x <span class="kw">in</span> (r, (r,y)))</span></code></pre></div>
+<ul>
+<li>intoduce free theorem and precondition</li>
+<li>counterexamples to ilustrate what precondition means and why we want
+it</li>
+<li>introduce new theorem baced on free theorem and precondition</li>
+<li>calculate monad definition from k2j and j2k</li>
+</ul>
+<h1 id="performance-analisys">Performance analisys</h1>
+<ul>
+<li>give some perfomance analysis examples that ilustrate
+improvement</li>
+</ul>
+<h1 id="related-work">Related work</h1>
+<p>J was researched in the context of Sequential games, but slowly found
+its way to other applications</p>
+<h1 id="outlook-and-future-work">Outlook and future work</h1>
+<ul>
+<li>Need to investigate further whats possible with the more general
+type</li>
+<li>Alpha beta pruning as next step of my work</li>
+</ul>
+<h1 id="conclusion">Conclusion</h1>
+<ul>
+<li>We should use generalised K istead of J because more useful and more
+intuitive once understood</li>
+<li>performance improvements are useful</li>
+<li>monad pair and sequence implementation much more intuitive and
+useful</li>
+</ul>
+<h1 id="appendix">Appendix</h1>
+<p>Proofs!</p>
