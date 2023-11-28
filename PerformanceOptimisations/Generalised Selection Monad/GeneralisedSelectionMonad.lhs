@@ -13,58 +13,46 @@ title: Generalised Selection Monad
 
 ---
 abstract:
-  This research paper explores a novel approach to selection functions through the 
-  introduction of a Generalized Selection Monad. The foundation is laid with the 
+  This paper explores a novel approach to selection functions through the 
+  introduction of a generalized selection monad. The foundation is laid with the 
   conventional selection monad `J`, defined as `(a -> r) -> a`, which employs a pair 
   function to compute new selection functions. However, inefficiencies in the original pair 
   function are identified. To address these issues, a specialized type `K` is introduced, 
   and its isomorphism to `J` is demonstrated. The paper further generalizes the `K` type to 
   `GK`, where performance improvements and enhanced intuitive usability are observed. The 
   embedding between `J` and `GK` is established, offering a more efficient and expressive 
-  alternative the well established `J` type for selection functions. The findings emphasize 
+  alternative to the well established `J` type for selection functions. The findings emphasize 
   the advantages of the Generalized Selection Monad and its applicability in diverse 
-  scenarios, paving the way for further exploration and optimization in future research.
+  scenarios, paving the way for further exploration and optimization.
 ---
 
 Introduction to the Selection Monad
 ===================================
 
 This section introduces the selection monad, focusing on the `type J r a = (a -> r) -> a`
-for selection functions. The `pair` function is explored, showcasing its capability to 
-compute new selection functions based on criteria from two existing functions. Illustrated 
-with a practical example, the decision-making scenarios involving individuals navigating 
-paths underscore the functionality of selection functions.
+for selection functions \cite{escardo2010selection}. The `pair` function is explored, 
+showcasing its capability to compute new selection functions based on criteria from two 
+existing functions. Illustrated with a practical example, the decision-making scenarios 
+involving individuals navigating paths underscore the functionality of selection functions.
 An analysis of the inefficiency in the original `pair` function identifies redundant 
 computational work. The primary contribution of the paper is then outlined: an 
-illustration and proposal for an efficient solution to enhance `pair` function 
+illustration and proposal for an efficient solution to enhance the `pair` functions 
 performance. This introductory overview sets the stage for a detailed exploration of the 
-selection monad and subsequent discussions on optimizations.
+selection monad and subsequent discussion on optimizations.
 
 Selection functions
 -------------------
 
-Consider the tollowing already know type for selection functions:
+Consider the type for selection functions introduced by Paulo Olvia and Martin Escardo 
+\cite{escardo2010selection} :
 
 > type J r a = (a -> r) -> a
 
-When given two selection functions, a `pair` function can be defined to compute a new 
-selection function. This resultant function selects a pair based on the criteria 
-established by the two given selection functions:
 
-> pair :: J r a -> J r b -> J r (a,b)
-> pair f g p = (a,b)
->   where
->       a = f (\x -> p (x, g (\y -> p (x,y))))
->       b = g (\y -> p (a,y))
-
-Example to illustrate the pair function
----------------------------------------
-
-To gain a deeper understanding of the provided `pair` function, consider the following 
-example. Picture two individuals walking on a path, one heading north and the other south. 
-As they proceed, a collision is imminent. At this juncture, each individual must make a 
-decision regarding their next move. This decision-making process can be modeled using 
-selection functions. The decision they need to make is modeled as either going right or 
+Consider the following example. Two individuals are walking towards each other. A 
+collision is imminent. At this juncture, each individual must decide their next move. This 
+decision-making process can be modeled using selection functions. The decision they need 
+to make is going right or 
 left:
 
 > data Decision = Left | Right
@@ -77,20 +65,30 @@ to walking right.
 > p1 p = if p Left then Left else Right
 > p2 p = if p Left then Left else Right
 
+When given two selection functions, a `pair` function can be defined to compute a new 
+selection function. This resultant function selects a pair based on the criteria 
+established by the two given selection functions:
+
+> pair :: J r a -> J r b -> J r (a,b)
+> pair f g p = (a,b)
+>   where
+>       a = f (\x -> p (x, g (\y -> p (x,y))))
+>       b = g (\y -> p (a,y))
+
 To apply the `pair` function, a predicate `pred` is needed that will judge two decisions 
-and return `True` if a crash would be avoided and `False` otherwise.
+and return `True` if a crash is avoided and `False` otherwise.
 
 > pred :: (Decision, Decision) -> Bool
 > pred (Left,Right) = True
 > pred (Right,Left) = True
 > pred _            = False
 
-With the `pair` function, the merging of the two selection functions into a new one that 
-identifies an optimal decision can now be calculated.
+The `pair` function, merges the two selection functions into a new one that calculates an  
+overall optimal decision.
 
 ```
-pair p1 p2 pred
---> (Left,Right)
+> pair p1 p2 pred
+(Left,Right)
 ```
 
 Examining how the `pair` function is defined reveals that the first element `a` of the 

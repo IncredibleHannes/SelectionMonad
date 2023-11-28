@@ -31,7 +31,7 @@
 \institute{
     University of Oxford, Department of Computer Science, UK
     \email{firstname.lastname@cs.ox.ac.uk}\and 
-    KULeuven, DepartmentofComputerScience, Belgium,
+    KULeuven, Department of ComputerScience, Belgium,
     \email{tom.schrijvers@kuleuven.be}
 }
 
@@ -39,22 +39,21 @@
 \maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-This research paper explores a novel approach to selection functions
-through the introduction of a Generalized Selection Monad. The
-foundation is laid with the conventional selection monad \texttt{J},
-defined as \texttt{(a\ -\textgreater{}\ r)\ -\textgreater{}\ a}, which
-employs a pair function to compute new selection functions. However,
+This paper explores a novel approach to selection functions through the
+introduction of a generalized selection monad. The foundation is laid
+with the conventional selection monad \texttt{J}, defined as
+\texttt{(a\ -\textgreater{}\ r)\ -\textgreater{}\ a}, which employs a
+pair function to compute new selection functions. However,
 inefficiencies in the original pair function are identified. To address
 these issues, a specialized type \texttt{K} is introduced, and its
 isomorphism to \texttt{J} is demonstrated. The paper further generalizes
 the \texttt{K} type to \texttt{GK}, where performance improvements and
 enhanced intuitive usability are observed. The embedding between
 \texttt{J} and \texttt{GK} is established, offering a more efficient and
-expressive alternative the well established \texttt{J} type for
+expressive alternative to the well established \texttt{J} type for
 selection functions. The findings emphasize the advantages of the
 Generalized Selection Monad and its applicability in diverse scenarios,
-paving the way for further exploration and optimization in future
-research.
+paving the way for further exploration and optimization.
 
 \keywords{Selection monad  \and Functional programming \and Algorithm design \and 
 Performance Optimisation \and Monads.}
@@ -76,49 +75,33 @@ Monad}\label{introduction-to-the-selection-monad}
 
 This section introduces the selection monad, focusing on the
 \texttt{type\ J\ r\ a\ =\ (a\ -\textgreater{}\ r)\ -\textgreater{}\ a}
-for selection functions. The \texttt{pair} function is explored,
-showcasing its capability to compute new selection functions based on
-criteria from two existing functions. Illustrated with a practical
-example, the decision-making scenarios involving individuals navigating
-paths underscore the functionality of selection functions. An analysis
-of the inefficiency in the original \texttt{pair} function identifies
-redundant computational work. The primary contribution of the paper is
-then outlined: an illustration and proposal for an efficient solution to
-enhance \texttt{pair} function performance. This introductory overview
-sets the stage for a detailed exploration of the selection monad and
-subsequent discussions on optimizations.
+for selection functions \cite{escardo2010selection}. The \texttt{pair}
+function is explored, showcasing its capability to compute new selection
+functions based on criteria from two existing functions. Illustrated
+with a practical example, the decision-making scenarios involving
+individuals navigating paths underscore the functionality of selection
+functions. An analysis of the inefficiency in the original \texttt{pair}
+function identifies redundant computational work. The primary
+contribution of the paper is then outlined: an illustration and proposal
+for an efficient solution to enhance the \texttt{pair} functions
+performance. This introductory overview sets the stage for a detailed
+exploration of the selection monad and subsequent discussion on
+optimizations.
 
 \subsection{Selection functions}\label{selection-functions}
 
-Consider the tollowing already know type for selection functions:
+Consider the type for selection functions introduced by Paulo Olvia and
+Martin Escardo \cite{escardo2010selection} :
 
 \begin{code}
 type J r a = (a -> r) -> a
 \end{code}
 
-When given two selection functions, a \texttt{pair} function can be
-defined to compute a new selection function. This resultant function
-selects a pair based on the criteria established by the two given
-selection functions:
-
-\begin{code}
-pair :: J r a -> J r b -> J r (a,b)
-pair f g p = (a,b)
-  where
-      a = f (\x -> p (x, g (\y -> p (x,y))))
-      b = g (\y -> p (a,y))
-\end{code}
-
-\subsection{Example to illustrate the pair
-function}\label{example-to-illustrate-the-pair-function}
-
-To gain a deeper understanding of the provided \texttt{pair} function,
-consider the following example. Picture two individuals walking on a
-path, one heading north and the other south. As they proceed, a
-collision is imminent. At this juncture, each individual must make a
-decision regarding their next move. This decision-making process can be
-modeled using selection functions. The decision they need to make is
-modeled as either going right or left:
+Consider the following example. Two individuals are walking towards each
+other. A collision is imminent. At this juncture, each individual must
+decide their next move. This decision-making process can be modeled
+using selection functions. The decision they need to make is going right
+or left:
 
 \begin{code}
 data Decision = Left | Right
@@ -134,9 +117,22 @@ p1 p = if p Left then Left else Right
 p2 p = if p Left then Left else Right
 \end{code}
 
+When given two selection functions, a \texttt{pair} function can be
+defined to compute a new selection function. This resultant function
+selects a pair based on the criteria established by the two given
+selection functions:
+
+\begin{code}
+pair :: J r a -> J r b -> J r (a,b)
+pair f g p = (a,b)
+  where
+      a = f (\x -> p (x, g (\y -> p (x,y))))
+      b = g (\y -> p (a,y))
+\end{code}
+
 To apply the \texttt{pair} function, a predicate \texttt{pred} is needed
-that will judge two decisions and return \texttt{True} if a crash would
-be avoided and \texttt{False} otherwise.
+that will judge two decisions and return \texttt{True} if a crash is
+avoided and \texttt{False} otherwise.
 
 \begin{code}
 pred :: (Decision, Decision) -> Bool
@@ -145,13 +141,13 @@ pred (Right,Left) = True
 pred _            = False
 \end{code}
 
-With the \texttt{pair} function, the merging of the two selection
-functions into a new one that identifies an optimal decision can now be
-calculated.
+The \texttt{pair} function, merges the two selection functions into a
+new one that calculates an\\
+overall optimal decision.
 
 \begin{verbatim}
-pair p1 p2 pred
---> (Left,Right)
+> pair p1 p2 pred
+(Left,Right)
 \end{verbatim}
 
 Examining how the \texttt{pair} function is defined reveals that the
