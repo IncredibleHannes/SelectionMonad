@@ -1,9 +1,10 @@
+\ignore{
+
 > {-# LANGUAGE ImpredicativeTypes #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
 
 > import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, Left, Right)
 
-\ignore{
 }
 
 ---
@@ -119,11 +120,11 @@ pair' p1 p2 pred
 
 This illustrates how the original `pair` function keeps track of its first decision when 
 determining its second element. It is noteworthy that, in the example example, achieving a 
-satisfying outcome for both pedestrians is only possible when they consider the 
-direction the other one is heading. The specific destination does not matter, as long 
-as they are moving in different directions. Consequently, the original `pair` function 
-can be conceived as a function that selects the optimal solution while retaining 
-awareness of previous solutions, whereas our modified `pair'` does not.
+satisfying outcome for both pedestrians is only possible when they consider the direction 
+the other one is heading. The specific destination does not matter, as long as they are 
+moving in different directions. Consequently, the original `pair` function can be 
+conceived as a function that selects the optimal solution while retaining awareness of 
+previous solutions, whereas our modified `pair'` does not.
 An issue with the original `pair` function might have been identified by the attentive 
 reader. There is redundant computational work involved. Initially, all possible pairs 
 are constructed to determine an optimal first element `a`, but the corresponding `b` 
@@ -339,20 +340,25 @@ Given the following functions with thier corrisponding types:
 
 \begin{haskell}
 g :: forall y. (x -> (r, y)) -> y
-h :: Y1 -> Y2
-p :: x -> (r, Y1)
+h :: y1 -> y2
+p :: x -> (r, y1)
 \end{haskell}
 
 We have:
 
 \begin{haskell}
-h (g p) = g (\x -> (id *** g) (p x))
+h (g p) = g (\x -> let (r,y) = (p x) in (r,h y))
 \end{haskell}
 
 \end{theorem}
-
-With the free theorem for `K`, the other half of the isomorphism can now be proven as 
-follows:
+The free theorem essentially asserts that a function `h :: y1 -> y2`, when applied to the 
+result of a selection function, can also be incorporated into the predicate and applied to 
+each individual element. This follows from the generalized type of `K`, where the only 
+means of generating `y1` values is through the application of `p`. Consequently, it 
+becomes inconsequential whether h is applied to the final result or to each individual 
+intermediate result.
+With the free theorem for `K`, the remaining portion of the isomorphism can now be 
+demonstrated as follows:
 
 \begin{proof}
 The equality (j2k . k2j) g = g is established through the following steps:
@@ -413,13 +419,21 @@ Following a similar pattern, this `sequenceGK` function builds all possible futu
 each element within `e`. Once an optimal list of elements is found, this list is simply 
 returned along with the corresponding `r` value.
 
-Even further, the monad definition for `GK` is straightforward:
+Moreover, the monad definition for `GK` is straightforward:
 
 > bindGK :: GK r a -> (a -> GK r b) -> GK r b
 > bindGK e f p = e (\x -> f x p)
 
+Given a selection function `e :: GK r a`, a function `f :: a -> GK r b`, and a predicate  
+`p :: forall c. (b -> (r,c))`, the result of type `(r,c)` can be constructed by utilizing 
+`e`. Each underlying element `x :: a` of `e` will be assessed based on the values produced 
+by applying `f` to each element `x`. This process results in a pair comprising the `r` 
+value by which the outcome is judged and the result value of type `c`. Since this pair is 
+already of the correct type, it is sufficient to simply return it.
+
 > returnGK :: a -> GK r a
 > returnGK x p = p x
+
 
 
 - ilustrate how nice it is to deal with

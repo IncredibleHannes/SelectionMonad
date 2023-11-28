@@ -12,6 +12,7 @@
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
 \lstnewenvironment{code}{\lstset{language=Haskell,basicstyle=\small\ttfamily}}{}
+\lstnewenvironment{haskell}{\lstset{language=Haskell,basicstyle=\small\ttfamily}}{}
 \newcommand{\ignore}[1]{}
 
 
@@ -436,13 +437,15 @@ proven: \texttt{(k2j\ .\ j2k)\ f\ =\ f} and
 \begin{proof}
 The equality (k2j . j2k) f = f can be straightforwardly demonstrated by applying all the 
 lambdas and the definitions of fst and snd:
-  \begin{code}
-  (k2j . j2k) f
-  -- {{ Apply definitions}}
-  = (\f p -> f (\x -> (p x, x))) (\p -> snd (p (f (fst . p))))
-  -- {{ Simplyfy }}
-  = f
-  \end{code}
+
+\begin{haskell}
+(k2j . j2k) f
+-- {{ Apply definitions}}
+= (\f p -> f (\x -> (p x, x))) (\p -> snd (p (f (fst . p))))
+-- {{ Simplyfy }}
+= f
+\end{haskell}
+
 \end{proof}
 
 This proof involves a direct application of lambda expressions and the
@@ -452,31 +455,45 @@ the free theorem for the special K type:
 
 \begin{theorem}[Free Theorem for `K`]
 Given the following functions with thier corrisponding types:
-  \begin{code}
-  g :: forall y. (x -> (r, y)) -> y
-  h :: Y1 -> Y2
-  p :: x -> (r, Y1)
-  \end{code}
-  We have:
-  \begin{code}
-  h (g p) = g (\x -> (id *** g) (p x))
-  \end{code}
+
+\begin{haskell}
+g :: forall y. (x -> (r, y)) -> y
+h :: y1 -> y2
+p :: x -> (r, y1)
+\end{haskell}
+
+We have:
+
+\begin{haskell}
+h (g p) = g (\x -> let (r,y) = (p x) in (r,h y))
+\end{haskell}
+
 \end{theorem}
 
-With the free theorem for \texttt{K}, the other half of the isomorphism
-can now be proven as follows:
+The free theorem essentially asserts that a function
+\texttt{h\ ::\ y1\ -\textgreater{}\ y2}, when applied to the result of a
+selection function, can also be incorporated into the predicate and
+applied to each individual element. This follows from the generalized
+type of \texttt{K}, where the only means of generating \texttt{y1}
+values is through the application of \texttt{p}. Consequently, it
+becomes inconsequential whether h is applied to the final result or to
+each individual intermediate result. With the free theorem for
+\texttt{K}, the remaining portion of the isomorphism can now be
+demonstrated as follows:
 
 \begin{proof}
 The equality (j2k . k2j) g = g is established through the following steps:
-  \begin{code}
-  (j2k . k2j) g
-  -- {{ Apply definitions and simplify}}
-  = \p -> snd (p (g (\x -> ((fst . p) x, x))))
-  -- {{ Free Theorem for K }}
-  = \p -> g (\x -> ((fst . p) x, (snd . p) x))
-  -- {{ Simplify }}
-  = g
-  \end{code}
+
+\begin{haskell}
+(j2k . k2j) g
+-- {{ Apply definitions and simplify}}
+= \p -> snd (p (g (\x -> ((fst . p) x, x))))
+-- {{ Free Theorem for K }}
+= \p -> g (\x -> ((fst . p) x, (snd . p) x))
+-- {{ Simplify }}
+= g
+\end{haskell}
+
 \end{proof}
 
 The monad definitions and \texttt{sequence} definition for the new
@@ -537,10 +554,23 @@ all possible futures for each element within \texttt{e}. Once an optimal
 list of elements is found, this list is simply returned along with the
 corresponding \texttt{r} value.
 
+Moreover, the monad definition for \texttt{GK} is straightforward:
+
 \begin{code}
 bindGK :: GK r a -> (a -> GK r b) -> GK r b
 bindGK e f p = e (\x -> f x p)
 \end{code}
+
+Given a selection function \texttt{e\ ::\ GK\ r\ a}, a function
+\texttt{f\ ::\ a\ -\textgreater{}\ GK\ r\ b}, and a predicate\\
+\texttt{p\ ::\ forall\ c.\ (b\ -\textgreater{}\ (r,c))}, the result of
+type \texttt{(r,c)} can be constructed by utilizing \texttt{e}. Each
+underlying element \texttt{x\ ::\ a} of \texttt{e} will be assessed
+based on the values produced by applying \texttt{f} to each element
+\texttt{x}. This process results in a pair comprising the \texttt{r}
+value by which the outcome is judged and the result value of type
+\texttt{c}. Since this pair is already of the correct type, it is
+sufficient to simply return it.
 
 \begin{code}
 returnGK :: a -> GK r a
@@ -548,8 +578,7 @@ returnGK x p = p x
 \end{code}
 
 \begin{itemize}
-\item
-  give pair and sequence
+\tightlist
 \item
   ilustrate how nice it is to deal with
 \end{itemize}
@@ -564,13 +593,13 @@ K}\label{relationship-to-j-and-special-k}
 \end{itemize}
 
 \begin{code}
--- k2gk :: K r a -> GK r a
--- k2gk f = snd . f
+gk2k :: forall r a b. ((a -> (r,b)) -> (r,b)) -> ((a -> (r,b)) -> b)
+gk2k f = snd . f
 \end{code}
 
 \begin{code}
--- gk2k :: GK r a -> K r a
--- gk2k f p =  f (\x -> let (r,y) = p x in (r, (r,y)))
+k2gk :: K r a -> GK r a
+k2gk f p = f (\x -> let (r,y) = p x in (r, (r,y)))
 \end{code}
 
 \begin{itemize}
