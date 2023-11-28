@@ -13,7 +13,17 @@ title: Generalised Selection Monad
 
 ---
 abstract:
-  General setup and introduction words here
+  This research paper explores a novel approach to selection functions through the 
+  introduction of a Generalized Selection Monad. The foundation is laid with the 
+  conventional selection monad `J`, defined as `(a -> r) -> a`, which employs a pair 
+  function to compute new selection functions. However, inefficiencies in the original pair 
+  function are identified. To address these issues, a specialized type `K` is introduced, 
+  and its isomorphism to `J` is demonstrated. The paper further generalizes the `K` type to 
+  `GK`, where performance improvements and enhanced intuitive usability are observed. The 
+  embedding between `J` and `GK` is established, offering a more efficient and expressive 
+  alternative the well established `J` type for selection functions. The findings emphasize 
+  the advantages of the Generalized Selection Monad and its applicability in diverse 
+  scenarios, paving the way for further exploration and optimization in future research.
 ---
 
 Introduction to the Selection Monad
@@ -317,7 +327,7 @@ untouched.
 To validate that these two operators indeed establish an isomorphism between `J` and `K`, 
 the following equations must be proven: `(k2j . j2k) f = f` and `(j2k . k2j) g = g`.
 
-\begin{proof}
+\begin{proof}[J to K Embedding]
 The equality (k2j . j2k) f = f can be straightforwardly demonstrated by applying all the 
 lambdas and the definitions of fst and snd:
 
@@ -335,13 +345,13 @@ This proof involves a direct application of lambda expressions and the definitio
 `fst` and `snd` for simplification. To facilitate the proof of the second isomorphism, we 
 initially introduce the free theorem for the special K type:
 
-\begin{theorem}[Free Theorem for `K`]
+\begin{theorem}[Free Theorem for K]
 Given the following functions with thier corrisponding types:
 
 \begin{haskell}
-g :: forall y. (x -> (r, y)) -> y
-h :: y1 -> y2
-p :: x -> (r, y1)
+g :: forall b. (a -> (r, b)) -> b
+h :: b1 -> b2
+p :: a -> (r, b1)
 \end{haskell}
 
 We have:
@@ -360,7 +370,7 @@ intermediate result.
 With the free theorem for `K`, the remaining portion of the isomorphism can now be 
 demonstrated as follows:
 
-\begin{proof}
+\begin{proof}[K to J Embedding]
 The equality (j2k . k2j) g = g is established through the following steps:
 
 \begin{haskell}
@@ -419,7 +429,101 @@ Following a similar pattern, this `sequenceGK` function builds all possible futu
 each element within `e`. Once an optimal list of elements is found, this list is simply 
 returned along with the corresponding `r` value.
 
-Moreover, the monad definition for `GK` is straightforward:
+Relationship to J and Special K
+-------------------------------
+With the following operators, selection functions of type `K` can be embedded into `GK`.
+
+> gk2k :: GK r a -> K r a
+> gk2k :: forall r a b. ((a -> (r,b)) -> (r,b)) -> ((a -> (r,b)) -> b)
+> gk2k f = snd . f
+
+> k2gk :: K r a -> GK r a
+> k2gk f p = f (\x -> let (r,y) = p x in (r, (r,y)))
+
+Similar to the free theroem for the `K` type, it is also possible to derive the free 
+theorem for the `GK` type:
+
+\begin{theorem}[Free Theorem for GK]
+Given the following functions with thier corrisponding types:
+
+\begin{haskell}
+g :: forall b. (\a -> (r,b)) -> (r,b)
+f :: b1 -> b2
+p :: a -> (r, b1)
+\end{haskell}
+
+We have:
+
+\begin{haskell}
+((id *** f) . g) p = g ((id *** f) . p)
+\end{haskell}
+
+\end{theorem}
+
+It is basically stating the same as the free Theorem for `K`, where given a function `f`
+that is applied to the result of a selection function, it dosent matter if this is done
+in the end to the final result, or inside the predicate of the selection function. But it
+now needs to account for the fact that the `GK` type is also returning the `r` value. 
+
+With the free theorem for `GK` we can now proof that selection functions of type  `K` can
+be embedded into `GK`:
+
+\begin{proof}[K to GK Embedding]
+The equality (k2gk . gk2k) f = f is established through the following steps:
+
+Assuming: f :: K r a
+
+\begin{haskell}
+(gk2k . k2gk) f
+-- {{ Definitions and rewrite }}
+= (\p -> (snd . f) (\x -> let (r,y) = p x in (r, (r,y)))) 
+-- {{ Free theorem of GK }}
+= (\p -> f (\x -> let (r,y) = p x in (r, snd (r,y))))
+-- {{ Simplify }}
+= f
+\end{haskell}
+\end{proof}
+
+Embedding `K` selection functions into the new `GK` type is a little bit more tricky. We
+essentially need to make sure that `g` is not changing the `r` value after applying `p` to
+it's elements. Therefore 
+
+
+\begin{proof}[GK to K Embedding]
+The equality (k2gk . gk2k) g = g is established through the following steps:
+
+Assuming that for 
+g :: GK r a
+forall p :: forall b . (a -> (r,b))
+exists x :: a
+such that:
+g p = p x
+
+\begin{haskell}
+(k2gk . gk2k) g
+-- {{ Definitions and rewrite }}
+= \p -> snd (g(\x -> let (r,y) = p x in (r, (r,y))))
+-- {{ Assumption }}
+= \p -> snd (exist x -> let (r,y) = p x in (r, (r,y)))
+-- {{ exists commuts }}
+= \p -> exists x -> let (r,y) = p x in snd (r, (r,y))
+-- {{ Assumption }}
+= \p -> g (\x -> let (r,y) = p x in snd (r, (r,y)))
+-- {{ Simplify }}
+= g
+\end{haskell}
+\end{proof}
+
+
+
+- counterexamples to ilustrate what precondition means and why we want it
+- introduce new theorem baced on free theorem and precondition
+- calculate monad definition from k2j and j2k
+
+GK forms a monad
+================
+
+The monad definition for `GK` is straightforward:
 
 > bindGK :: GK r a -> (a -> GK r b) -> GK r b
 > bindGK e f p = e (\x -> f x p)
@@ -434,37 +538,32 @@ already of the correct type, it is sufficient to simply return it.
 > returnGK :: a -> GK r a
 > returnGK x p = p x
 
+The proofs for the monad laws are attached in the appendix.
+
+With these monad definitions, we'd like to investigate how they relate to the definitions 
+for `J` or `K` respectively. We'd like the `GK` monad to behave in the same way as the `J`
+and `K` monad does.
+
 
 
 - ilustrate how nice it is to deal with
-
-Relationship to J and Special K
--------------------------------
-
-- Show that generalised K is an embedding
-
-> gk2k :: forall r a b. ((a -> (r,b)) -> (r,b)) -> ((a -> (r,b)) -> b)
-> gk2k f = snd . f
-
-
-> k2gk :: K r a -> GK r a
-> k2gk f p = f (\x -> let (r,y) = p x in (r, (r,y)))
-
-- intoduce free theorem and precondition
-- counterexamples to ilustrate what precondition means and why we want it
-- introduce new theorem baced on free theorem and precondition
-- calculate monad definition from k2j and j2k
 
 Performance analisys
 ====================
 
 -  give some perfomance analysis examples that ilustrate improvement
+-  Done by an example and use trace to count calls of P
 
 Related work
 ============
 
-J was researched in the context of Sequential games, but slowly found its way to other 
+- J was researched in the context of Sequential games, but slowly found its way to other 
 applications
+
+- It can also be used for greedy algorythms, however this performance optimisation
+does not apply in this case
+
+- But greedy algorythms can also be represented with the new generalised selection monad
 
 Outlook and future work
 =======================
@@ -478,9 +577,53 @@ Conclusion
 - We should use generalised K istead of J because more useful and more intuitive 
   once understood
 - performance improvements are useful
-- monad pair and sequence implementation much more intuitive and useful
+- monad, pair, and sequence implementation much more intuitive and useful
 
 Appendix
 ========
 
-Proofs!\cite{escardo2010sequential}
+
+Proof Monad Laws for GK
+-----------------------
+
+
+\begin{proof}[Left identity]
+\begin{haskell}
+return a >>= h
+= (flip ($)) a >>= h
+= (\p -> p a) >>= h
+= \p' -> (\p -> p a) ((flip h) p')
+= \p' -> ((flip h) p') a
+= \p' -> h a p'
+= h a
+\end{haskell}
+\end{proof}
+
+	
+\begin{proof}[Right identity]
+\begin{haskell}
+m >>= return 
+= \p -> m ((flip return) p)
+= \p -> m ((flip (flip ($))) p)
+= \p -> m (($) p)
+= \p -> m p
+= m 
+\end{haskell}
+\end{proof}
+
+
+\begin{proof}[Associativity]
+\begin{haskell}
+(m >>= g) >>= h 
+= \p -> (m >>= g) ((flip h) p)
+= \p -> (\p' -> m ((flip g) p')) ((flip h) p)
+= \p -> (m ((flip g) ((flip h) p))) 
+= \p -> m ((\y x -> g x y) ((flip h) p))
+= \p -> m ((\x -> g x ((flip h) p)))
+= \p -> m ((\p' x -> (g x) ((flip h) p')) p)
+= \p -> m ((flip (\x p' -> (g x) ((flip h) p'))) p)
+= \p -> m ((flip (\x -> (\p' -> (g x) ((flip h) p')))) p)
+= \p -> m ((flip (\x -> g x >>= h)) p)
+= m >>= (\x -> g x >>= h)
+\end{haskell}
+\end{proof}
