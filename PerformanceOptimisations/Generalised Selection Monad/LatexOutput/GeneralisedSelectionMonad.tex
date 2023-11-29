@@ -18,7 +18,7 @@
 
 \begin{document}
 
-\title{Generalised Selection Monad}
+\title{Generalising the Selection Monad}
 
 \author{
     Johannes Hartmann\inst{1} \and 
@@ -49,7 +49,7 @@ these issues, a specialized type \texttt{K} is introduced, and its
 isomorphism to \texttt{J} is demonstrated. The paper further generalizes
 the \texttt{K} type to \texttt{GK}, where performance improvements and
 enhanced intuitive usability are observed. The embedding between
-\texttt{J} and \texttt{GK} is established, offering a more efficient and
+\texttt{J} to \texttt{GK} is established, offering a more efficient and
 expressive alternative to the well established \texttt{J} type for
 selection functions. The findings emphasize the advantages of the
 Generalized Selection Monad and its applicability in diverse scenarios,
@@ -66,7 +66,9 @@ Performance Optimisation \and Monads.}
 > {-# LANGUAGE ImpredicativeTypes #-}
 > {-# LANGUAGE ScopedTypeVariables #-}
 
-> import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, Left, Right)
+> import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, pred)
+> import Data.Function (on)
+> import Data.List
 
 }
 
@@ -98,23 +100,22 @@ type J r a = (a -> r) -> a
 \end{code}
 
 Consider the following example. Two individuals are walking towards each
-other. A collision is imminent. At this juncture, each individual must
-decide their next move. This decision-making process can be modeled
-using selection functions. The decision they need to make is going right
-or left:
+other on the pavement. A collision is imminent. At this juncture, each
+individual must decide their next move. This decision-making process can
+be modeled using selection functions. The decision they need to make is
+going towards the street the or the wall:
 
 \begin{code}
-data Decision = Left | Right
+data Decision = Street | Wall deriving Show
 \end{code}
 
-The respective selection functions decide given a predicate that tells
-them what decision is the correct one, select the correct one, and if
-there is no correct one, they default to walking right.
+The respective selection functions decide given a property function that
+tells them what decision is the correct one, select the correct one, and
+if there is no correct one, they default to walking towards the Wall.
 
 \begin{code}
-p1, p2 :: J Bool Decision
-p1 p = if p Left then Left else Right
-p2 p = if p Left then Left else Right
+s :: J Bool Decision
+s p = if p Street then Street else Wall
 \end{code}
 
 When given two selection functions, a \texttt{pair} function can be
@@ -130,15 +131,15 @@ pair f g p = (a,b)
       b = g (\y -> p (a,y))
 \end{code}
 
-To apply the \texttt{pair} function, a predicate \texttt{pred} is needed
-that will judge two decisions and return \texttt{True} if a crash is
-avoided and \texttt{False} otherwise.
+To apply the \texttt{pair} function, a property function \texttt{pred}
+is needed that will judge two decisions and return \texttt{True} if a
+crash is avoided and \texttt{False} otherwise.
 
 \begin{code}
 pred :: (Decision, Decision) -> Bool
-pred (Left,Right) = True
-pred (Right,Left) = True
-pred _            = False
+pred (Wall,Street) = True
+pred (Street,Wall) = True
+pred _             = False
 \end{code}
 
 The \texttt{pair} function, merges the two selection functions into a
@@ -146,8 +147,8 @@ new one that calculates an\\
 overall optimal decision.
 
 \begin{verbatim}
-> pair p1 p2 pred
-(Left,Right)
+ghci> pair s s pred
+(Street,Wall)
 \end{verbatim}
 
 Examining how the \texttt{pair} function is defined reveals that the
@@ -189,8 +190,8 @@ However, applying this modified \texttt{pair\textquotesingle{}} to our
 previous example this results in a overall non optimal solution.
 
 \begin{verbatim}
-pair' p1 p2 pred
---> (Left,Left)
+ghci> pair' p1 p2 pred
+(Left,Left)
 \end{verbatim}
 
 This illustrates how the original \texttt{pair} function keeps track of
@@ -246,7 +247,7 @@ potential optimization in subsequent sections of this research paper.
 \subsection{Selection monad}\label{selection-monad}
 
 The formation of a monad within the selection functions unfolds as
-follows:
+follows \cite{escardo2010selection}:
 
 \begin{code}
 (>>=) :: J r a -> (a -> J r b) -> J r b
@@ -280,11 +281,12 @@ underscoring their alignment with established Haskell conventions.
 Functions}\label{illustration-of-sequence-in-the-context-of-selection-functions}
 
 To ilustrate the application of the sequence function within the domain
-of selection functions, consider a practical scenario: the task of
-cracking a secret password. In this hypothetical situation, a black box
-predicate \texttt{p} is provided that returns \texttt{True} if the
-correct password is entered and \texttt{False} otherwise. Additionally,
-knowledge is assumed that the password is six characters long:
+of selection functions, consider a practical scenario
+\cite{hartmann2022algorithm}: the task of cracking a secret password. In
+this hypothetical situation, a black box property function \texttt{p} is
+provided that returns \texttt{True} if the correct password is entered
+and \texttt{False} otherwise. Additionally, knowledge is assumed that
+the password is six characters long:
 
 \begin{code}
 p :: String -> Bool
@@ -296,15 +298,13 @@ Suppose access is available to a \texttt{maxWith} function, defined as:
 
 \begin{code}
 maxWith :: Ord r => [a] -> (a -> r) -> a
-maxWith [x] f                      = x
-maxWith (x:y:xs) f | (f x) > (f y) = maxWith (x:xs) f
-                   | otherwise     = maxWith (y:xs) f
+maxWith xs f = snd (maximumBy (compare `on` fst) (map (\x -> (f x , x)) xs))
 \end{code}
 
 With these resources, a selection function denoted as
-\texttt{selectChar} can be constructed, which, given a predicate that
-evaluates each character, selects a single character satisfying the
-specified predicate:
+\texttt{selectChar} can be constructed, which, given a property function
+that evaluates each character, selects a single character satisfying the
+specified property function:
 
 \begin{code}
 selectChar :: J Bool Char
@@ -320,30 +320,30 @@ instance of the selection function focuses on a specific character of
 the secret password:
 
 \begin{verbatim}
-sequence (replicate 6 selectChar) p
--> "secret"
+ghci> sequence (replicate 6 selectChar) p
+"secret"
 \end{verbatim}
 
 This illustrative example not only showcases the practical application
 of the \texttt{sequence} function within the domain of selection
 functions but also emphasizes its utility in addressing real-world
 problems, such as scenarios involving password cracking. Notably, there
-is no need to explicitly specify a predicate for judging individual
-character; rather, this predicate is constructed within the monads bind
-definition, and its utilization is facilitated through the application
-of the \texttt{sequence} function. Additionally, attention should be
-drawn to the fact that this example involves redundant calculations.
-After determining the first character of the secret password, the system
-overlooks the prior computation of the entire password and initiates the
-calculation anew for subsequent characters. To address this specific
-inefficiency within the selection monad, concerning the pair and
-sequence functions, two new variations of the selection monad will be
-introduced. Initially, an examination of a new type, denoted as
-\texttt{K}, will reveal its isomorphism to the selection monad
-\texttt{J}. Subsequently, an exploration of the generalization of this
-\texttt{K} type will enhance its intuitive usability. Remarkably, it
-will be demonstrated that the \texttt{J} monad can be embedded into this
-generalized \texttt{K} type.
+is no need to explicitly specify a property function for judging
+individual character; rather, this property function is constructed
+within the monads bind definition, and its utilization is facilitated
+through the application of the \texttt{sequence} function. Additionally,
+attention should be drawn to the fact that this example involves
+redundant calculations. After determining the first character of the
+secret password, the system overlooks the prior computation of the
+entire password and initiates the calculation anew for subsequent
+characters. To address this specific inefficiency within the selection
+monad, concerning the pair and sequence functions, two new variations of
+the selection monad will be introduced. Initially, an examination of a
+new type, denoted as \texttt{K}, will reveal its isomorphism to the
+selection monad \texttt{J}. Subsequently, an exploration of the
+generalization of this \texttt{K} type will enhance its intuitive
+usability. Remarkably, it will be demonstrated that the \texttt{J} monad
+can be embedded into this generalized \texttt{K} type.
 
 \section{Special K}\label{special-k}
 
@@ -354,12 +354,12 @@ type K r a = forall b. (a -> (r,b)) -> b
 \end{code}
 
 While selection functions of type \texttt{J} are still in anticipation
-of a predicate capable of judging their underlying elements, a similar
-operation is performed by the new \texttt{K} type. The predicate of the
-\texttt{K} type also assesses its elements by transforming them into
-\texttt{r} values. Additionally, it converts the \texttt{x} into any
-\texttt{y} and returns that \texttt{y} along with its judgment
-\texttt{r}.
+of a property function capable of judging their underlying elements, a
+similar operation is performed by the new \texttt{K} type. The property
+function of the \texttt{K} type also assesses its elements by
+transforming them into \texttt{r} values. Additionally, it converts the
+\texttt{a} into any \texttt{b} and returns that \texttt{y} along with
+its judgment \texttt{r}.
 
 \begin{code}
 pairK :: K r a -> K r b -> K r (a,b)
@@ -381,7 +381,8 @@ duplicate already represents the complete solution, the entire result
 for an optimal \texttt{x} can now be straightforwardly yielded by
 \texttt{f,} eliminating the need for additional computations.
 
-The sequenceK for this novel K type can be defined as follows:
+The \texttt{sequenceK} for this novel \texttt{K} type can be defined as
+follows:
 
 \begin{code}
 sequenceK :: [K r a] -> K r [a]
@@ -451,9 +452,9 @@ lambdas and the definitions of fst and snd:
 
 \begin{haskell}
 (k2j . j2k) f
--- {{ Apply definitions}}
+{{Apply definitions}}
 = (\f p -> f (\x -> (p x, x))) (\p -> snd (p (f (fst . p))))
--- {{ Simplyfy }}
+{{Simplify }}
 = f
 \end{haskell}
 
@@ -462,10 +463,10 @@ lambdas and the definitions of fst and snd:
 This proof involves a direct application of lambda expressions and the
 definitions of \texttt{fst} and \texttt{snd} for simplification. To
 facilitate the proof of the second isomorphism, we initially introduce
-the free theorem for the special K type:
+the free theorem for the special K type \cite{wadler1989theorems}:
 
 \begin{theorem}[Free Theorem for K]
-Given the following functions with thier corrisponding types:
+Given the following functions with their corresponding types:
 
 \begin{haskell}
 g :: forall b. (a -> (r, b)) -> b
@@ -483,25 +484,25 @@ h (g p) = g (\x -> let (r,y) = (p x) in (r,h y))
 
 The free theorem essentially asserts that a function
 \texttt{h\ ::\ y1\ -\textgreater{}\ y2}, when applied to the result of a
-selection function, can also be incorporated into the predicate and
-applied to each individual element. This follows from the generalized
-type of \texttt{K}, where the only means of generating \texttt{y1}
-values is through the application of \texttt{p}. Consequently, it
-becomes inconsequential whether h is applied to the final result or to
-each individual intermediate result. With the free theorem for
-\texttt{K}, the remaining portion of the isomorphism can now be
-demonstrated as follows:
+selection function, can also be incorporated into the property function
+and applied to each individual element. This follows from the
+generalized type of \texttt{K}, where the only means of generating
+\texttt{y1} values is through the application of \texttt{p}.
+Consequently, it becomes inconsequential whether h is applied to the
+final result or to each individual intermediate result. With the free
+theorem for \texttt{K}, the remaining portion of the isomorphism can now
+be demonstrated as follows:
 
 \begin{proof}[K to J Embedding]
 The equality (j2k . k2j) g = g is established through the following steps:
 
 \begin{haskell}
 (j2k . k2j) g
--- {{ Apply definitions and simplify}}
+{{Apply definitions and simplify}}
 = \p -> snd (p (g (\x -> ((fst . p) x, x))))
--- {{ Free Theorem for K }}
+{{Free Theorem for K }}
 = \p -> g (\x -> ((fst . p) x, (snd . p) x))
--- {{ Simplify }}
+{{Simplify }}
 = g
 \end{haskell}
 
@@ -516,7 +517,7 @@ the associated definitions for \texttt{sequence} and \texttt{pair},
 rendering them challenging to handle and lacking in intuitiveness.
 Introducing another type, \texttt{GK}, that returns the entire tuple
 rather than just the result value seems more intuitive. This exploration
-is detailed in the following chapter, where similar performance
+is detailed in the following section, where similar performance
 improvements are observed with \texttt{GK} while the definitions become
 more straightforward. This approach also eliminates the need for
 unnecessary copying of data. However, it is revealed that \texttt{GK} is
@@ -535,10 +536,11 @@ type GK r a = forall b. (a -> (r,b)) -> (r,b)
 \end{code}
 
 Unlike its predecessor, \texttt{GK} returns the entire pair produced by
-the predicate, rather than just the result value. The implementation of
-\texttt{pairGK} for the new \texttt{GK} type no longer necessitates the
-creation of a copy of the data structure. It suffices to return the
-result of the predicate's application to the complete pair:
+the property function, rather than just the result value. The
+implementation of \texttt{pairGK} for the new \texttt{GK} type no longer
+necessitates the creation of a copy of the data structure. It suffices
+to return the result of the property function's application to the
+complete pair:
 
 \begin{code}
 pairGK :: GK r a -> GK r b -> GK r (a,b)
@@ -549,10 +551,10 @@ In terms of readability, this definition of pairGK is significantly more
 concise, conveying the essence of the \texttt{pair} function without
 unnecessary boilerplate code. For every element \texttt{x\ ::\ a} within
 \texttt{f}, all \texttt{y\ ::\ b} within \texttt{g} are inspected and
-judged by the given predicate \texttt{p}. The resulting pair selection
-function returns the optimal pair of \texttt{(a,b)} values according to
-the provided predicate. Furthermore, we define \texttt{sequenceGK} as
-follows:
+judged by the given property function \texttt{p}. The resulting pair
+selection function returns the optimal pair of \texttt{(a,b)} values
+according to the provided property function. Furthermore, we define
+\texttt{sequenceGK} as follows:
 
 \begin{code}
 sequenceGK :: [GK r a] -> GK r [a]
@@ -572,7 +574,6 @@ With the following operators, selection functions of type \texttt{K} can
 be embedded into \texttt{GK}.
 
 \begin{code}
-gk2k :: GK r a -> K r a
 gk2k :: forall r a b. ((a -> (r,b)) -> (r,b)) -> ((a -> (r,b)) -> b)
 gk2k f = snd . f
 \end{code}
@@ -586,7 +587,7 @@ Similar to the free theroem for the \texttt{K} type, it is also possible
 to derive the free theorem for the \texttt{GK} type:
 
 \begin{theorem}[Free Theorem for GK]
-Given the following functions with thier corrisponding types:
+Given the following functions with thier corresponding types:
 
 \begin{haskell}
 g :: forall b. (\a -> (r,b)) -> (r,b)
@@ -605,9 +606,9 @@ We have:
 It is basically stating the same as the free Theorem for \texttt{K},
 where given a function \texttt{f} that is applied to the result of a
 selection function, it dosent matter if this is done in the end to the
-final result, or inside the predicate of the selection function. But it
-now needs to account for the fact that the \texttt{GK} type is also
-returning the \texttt{r} value.
+final result, or inside the property function of the selection function.
+But it now needs to account for the fact that the \texttt{GK} type is
+also returning the \texttt{r} value.
 
 With the free theorem for \texttt{GK} we can now proof that selection
 functions of type \texttt{K} can be embedded into \texttt{GK}:
@@ -619,11 +620,11 @@ Assuming: f :: K r a
 
 \begin{haskell}
 (gk2k . k2gk) f
--- {{ Definitions and rewrite }}
+{{ Definitions and rewrite }}
 = (\p -> (snd . f) (\x -> let (r,y) = p x in (r, (r,y)))) 
--- {{ Free theorem of GK }}
+{{ Free theorem of GK }}
 = (\p -> f (\x -> let (r,y) = p x in (r, snd (r,y))))
--- {{ Simplify }}
+{{ Simplify }}
 = f
 \end{haskell}
 \end{proof}
@@ -645,15 +646,15 @@ g p = p x
 
 \begin{haskell}
 (k2gk . gk2k) g
--- {{ Definitions and rewrite }}
+{{ Definitions and rewrite }}
 = \p -> snd (g(\x -> let (r,y) = p x in (r, (r,y))))
--- {{ Assumption }}
+{{ Assumption }}
 = \p -> snd (exist x -> let (r,y) = p x in (r, (r,y)))
--- {{ exists commuts }}
+{{ exists commuts }}
 = \p -> exists x -> let (r,y) = p x in snd (r, (r,y))
--- {{ Assumption }}
+{{ Assumption }}
 = \p -> g (\x -> let (r,y) = p x in snd (r, (r,y)))
--- {{ Simplify }}
+{{ Simplify }}
 = g
 \end{haskell}
 \end{proof}
@@ -679,7 +680,7 @@ bindGK e f p = e (\x -> f x p)
 \end{code}
 
 Given a selection function \texttt{e\ ::\ GK\ r\ a}, a function
-\texttt{f\ ::\ a\ -\textgreater{}\ GK\ r\ b}, and a predicate\\
+\texttt{f\ ::\ a\ -\textgreater{}\ GK\ r\ b}, and a property function\\
 \texttt{p\ ::\ forall\ c.\ (b\ -\textgreater{}\ (r,c))}, the result of
 type \texttt{(r,c)} can be constructed by utilizing \texttt{e}. Each
 underlying element \texttt{x\ ::\ a} of \texttt{e} will be assessed
@@ -701,10 +702,158 @@ to the definitions for \texttt{J} or \texttt{K} respectively. We'd like
 the \texttt{GK} monad to behave in the same way as the \texttt{J} and
 \texttt{K} monad does.
 
+In order to dirive we need to introduce the following two theorems:
+
+\begin{theorem}[Theorem 1]
+\begin{haskell}
+f :: (r,a) -> (r,b)
+g :: K r x
+p :: x -> (r,a)
+f (g p) = g (f . p)
+\end{haskell}
+iff (fst . f . p) = fst . p
+
+\end{theorem}
+
+\begin{proof}[Theorem 1]
+\begin{haskell}
+Assuming that for 
+g :: GK r a
+forall p :: forall b . (a -> (r,b))
+exists x :: a
+such that:
+g p = p x
+
+f (g p)
+{{ Assumption }}
+= exists x -> f (p x)
+{{ rewrite as tuple }}
+= ((fst . f . p) x, (snd . f . p) x)
+{{ Theorem 1 condition }}
+= ((fst . p ) x , (snd . f . p) x)                                                   
+{{ rewrite as let }}
+= let (r, y) = p x in (r, snd (f (r,y)))                                             
+{{ rewrite as *** }}
+= let (r, y) = p x in (id *** (\y -> snd (f (r,y)))) (r, y)                          
+{{ resolve *** }}
+= let (r, y) = p x in (\(a,b) -> (a, (\y -> snd (f (r,y))) b)) (r, y)                
+{{ apply lambda }}
+= let (r, y) = p x in (\(a,b) -> (a, snd (f (r,b)))) (r, y)                          
+{{ expand let }}
+= let r = fst (p x) in let y = snd (p x) in (\(a,b) -> (a, snd (f (r,b)))) (r, y)    
+{{ remove let }}
+= (\(a,b) -> (a, snd (f (fst (p x), b)))) ((fst (p x)), (snd (p x)))                 
+{{ simplify }}
+= (\(a,b) -> (a, snd (f (fst (p x), b)))) p x                                        
+{{ remove patternmatch in lambda }}
+= (\a -> (fst a, snd (f (fst (p x), snd a)))) p x                                   
+{{ replace (p x) with a within lambda }}
+= (\a -> (fst a, snd (f (fst a, snd a)))) p x                                        
+{{ add patternmatch to lamvda }}
+= (\(r,y) -> (r, snd (f (r, y)))) p x                                                
+{{ Assumption }}
+= (\(r,y) -> (r, snd (f (r, y)))) g p                                                
+{{ free Theorem for GK }}
+= g ((\(r,y) -> (r,  snd (f (r,y)))) . p)                                            
+{{ rewrite (.) }}
+= g (\x -> (\(r,y) -> (r,  snd (f (r,y)))) (p x))                                    
+{{ pull (p x) into lambda }}
+= g (\x -> (fst (p x),  snd (f (fst (p x) ,snd (p x)))))                             
+{{ simplify tuple to p x }}
+= g (\x -> (fst (p x),  snd (f (p x))))                                              
+{{ rewrite with (.) }}
+= g (\x -> ((fst . p) x, (snd . f . p) x))                                           
+{{ expand first bit with theorem condition }}
+= g (\x -> ((fst . f . p) x, (snd . f . p) x))                                       
+{{ simplify tuple to (f . p) x }}
+= g (\x -> (f . p) x)                                                                
+{{ remove lambda }}
+= g (f . p)
+\end{haskell}
+\end{proof}
+
+To further simplify the calculation we aslso introduce the following
+theorem:
+
+\begin{theorem}[Theorem 2]
+If q does apply p to get the r value but keeps the original value, and we then use that 
+original value to compute the (r,z) values with p we can call g with p directly
+\begin{haskell}
+
+-- p :: x -> (r,y)
+-- g :: K r x
+-- p (snd (g q)) = g p
+--    where q = (\x -> ((fst . p) x, x))
+\end{haskell}
+\end{theorem}
+
+And we can proof Theorem 2 by utilising Theorem 1.
+
+\begin{proof}[Theorem 1]
+\begin{haskell}
+(p . snd) (g q)
+= g (\x -> (p . snd) ((fst . p) x, x))
+= g p
+
+iff 
+(fst . p . snd) (\x -> ((fst . p) x, x))
+= \y -> (fst ( p (snd ( (\x -> ((fst . p) x, x)) y))))
+= \y -> (fst(p(snd ((fst . p) y, y) )))
+= \x -> (fst . p) x
+= fst . (\x -> ((fst . p) x, x)) 
+\end{haskell}
+\end{proof}
+
+-- TODO: Give an intuition what these theorems mean
+
+Now, consider the following two operators that transform between
+\texttt{GK} selection functions and \texttt{J} selection functions:
+
+\begin{code}
+j2gk :: J r x -> GK r x
+j2gk f p = p (f (fst . p))
+\end{code}
+
+\begin{code}
+gk2j :: GK r x -> J r x
+gk2j f p = snd (f (\x -> (p x, x)))
+\end{code}
+
+We can calculate the bind implementation for \texttt{GK} with the
+\texttt{j2gk} and \texttt{gk2j} operators and the previusly introduced
+theorems:
+
+\begin{proof}[GK Monad behaves similar to J]
+\begin{haskell}
+j2gk ((>>=) (gk2j f) (\x -> gk2j (g x)))                                                         
+{{ Definition of (>>=) }}
+= j2gk ((\f g p -> g (f (p . flip g p)) p) (gk2j f) (\x -> gk2j (g x)))
+{{ Simplify }}
+= j2gk (\p -> gk2j (g (gk2j f (p . (\x -> gk2j (g x) p)))) p)
+{{ Definition of j2gk and rewrite }}
+= \p -> p (gk2j (g (gk2j f (\x -> fst ((p . snd) ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))
+{{ Theorem 1 }}
+= \p -> p (gk2j (g (gk2j f (\x -> fst (((g x) (\x -> (p . snd) ((fst . p) x, x))))))) (fst . p))
+{{Definition of j2gk and rewrite }}                  
+= \p -> p (snd (g (snd (f (\x -> (fst (g x p), x)))) (\x -> ((fst . p) x, x))))
+{{ Theorem 2 }}
+= \p -> g (snd (f (\x -> (fst (g x p), x)))) p
+{{ Rewrite }}
+= \p -> (\y -> g (snd y) p) (f (\x -> (fst (g x p), x)))
+{{ Theorem 1 }}
+= \p -> f ((\y -> g (snd y) p) . (\x -> (fst (g x p), x)))  
+{{ Simplify }}
+\p -> f (\x -> g x p)
+\end{haskell}
+\end{proof}
+
+This shows that all \texttt{GK} selection functions behave the same when
+transforemd to \texttt{K} or \texttt{J} selection functions.
+
 \begin{itemize}
 \tightlist
 \item
-  ilustrate how nice it is to deal with
+  TODO: ilustrate how nice it is to deal with
 \end{itemize}
 
 \section{Performance analisys}\label{performance-analisys}
@@ -755,49 +904,6 @@ the \texttt{GK} monad to behave in the same way as the \texttt{J} and
   useful
 \end{itemize}
 
-\section{Appendix}\label{appendix}
-
-\subsection{Proof Monad Laws for GK}\label{proof-monad-laws-for-gk}
-
-\begin{proof}[Left identity]
-\begin{haskell}
-return a >>= h
-= (flip ($)) a >>= h
-= (\p -> p a) >>= h
-= \p' -> (\p -> p a) ((flip h) p')
-= \p' -> ((flip h) p') a
-= \p' -> h a p'
-= h a
-\end{haskell}
-\end{proof}
-
-\begin{proof}[Right identity]
-\begin{haskell}
-m >>= return 
-= \p -> m ((flip return) p)
-= \p -> m ((flip (flip ($))) p)
-= \p -> m (($) p)
-= \p -> m p
-= m 
-\end{haskell}
-\end{proof}
-
-\begin{proof}[Associativity]
-\begin{haskell}
-(m >>= g) >>= h 
-= \p -> (m >>= g) ((flip h) p)
-= \p -> (\p' -> m ((flip g) p')) ((flip h) p)
-= \p -> (m ((flip g) ((flip h) p))) 
-= \p -> m ((\y x -> g x y) ((flip h) p))
-= \p -> m ((\x -> g x ((flip h) p)))
-= \p -> m ((\p' x -> (g x) ((flip h) p')) p)
-= \p -> m ((flip (\x p' -> (g x) ((flip h) p'))) p)
-= \p -> m ((flip (\x -> (\p' -> (g x) ((flip h) p')))) p)
-= \p -> m ((flip (\x -> g x >>= h)) p)
-= m >>= (\x -> g x >>= h)
-\end{haskell}
-\end{proof}
-
 %
 % ---- Bibliography ----
 %
@@ -813,4 +919,41 @@ m >>= return
 \newpage
 \section*{Appendix}
 \appendix
+\subsection*{Proof Monad Laws for GK}\label{GK-monad-laws}
+\begin{proof}[Left identity]
+\begin{haskell}
+return a >>= h
+= (flip ($)) a >>= h
+= (\p -> p a) >>= h
+= \p' -> (\p -> p a) ((flip h) p')
+= \p' -> ((flip h) p') a
+= \p' -> h a p'
+= h a
+\end{haskell}
+\end{proof}
+\begin{proof}[Right identity]
+\begin{haskell}
+m >>= return
+= \p -> m ((flip return) p)
+= \p -> m ((flip (flip ($))) p)
+= \p -> m (($) p)
+= \p -> m p
+= m
+\end{haskell}
+\end{proof}
+\begin{proof}[Associativity]
+\begin{haskell}
+(m >>= g) >>= h
+= \p -> (m >>= g) ((flip h) p)
+= \p -> (\p' -> m ((flip g) p')) ((flip h) p)
+= \p -> (m ((flip g) ((flip h) p)))
+= \p -> m ((\y x -> g x y) ((flip h) p))
+= \p -> m ((\x -> g x ((flip h) p)))
+= \p -> m ((\p' x -> (g x) ((flip h) p')) p)
+= \p -> m ((flip (\x p' -> (g x) ((flip h) p'))) p)
+= \p -> m ((flip (\x -> (\p' -> (g x) ((flip h) p')))) p)
+= \p -> m ((flip (\x -> g x >>= h)) p)
+= m >>= (\x -> g x >>= h)
+\end{haskell}
+\end{proof}
 \end{document}
