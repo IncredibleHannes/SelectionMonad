@@ -1,4 +1,3 @@
-%include polycode.fmt
 \ignore{
 
 > {-# LANGUAGE ImpredicativeTypes #-}
@@ -7,7 +6,7 @@
 > import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, pred)
 > import Data.Function (on)
 > import Data.List
-
+  
 }
 
 ---
@@ -107,13 +106,13 @@ decisions and return $True$ if a crash is avoided and $False$ otherwise.
 > pred (Street,Wall) = True
 > pred _             = False
 
-The $pair$ function, merges the two selection functions into a new one that calculates an  
+The $pair$ function, merges the two selection functions into a new one that calculates an 
 overall optimal decision.
 
-```
+\begin{haskell}
 ghci> pair s s pred
 (Street,Wall)
-```
+\end{haskell} 
 
 Examining how the $pair$ function is defined reveals that the first element $a$ of the 
 pair is determined by applying the initial selection function $f$ to a newly constructed 
@@ -145,10 +144,10 @@ to be more symmetric.
 However, applying this modified $pair'$ to our previous example this results in a overall 
 non optimal solution.
 
-```
+\begin{haskell}
 ghci> pair' p1 p2 pred
 (Left,Left)
-```
+\end{haskell}
 
 This illustrates how the original $pair$ function keeps track of its first decision when 
 determining its second element. It is noteworthy that, in the example example, achieving a 
@@ -252,10 +251,10 @@ function, the sequence function can be employed on a list comprising six identic
 of $selectChar$ to successfully crack the secret password. Each instance of the selection 
 function focuses on a specific character of the secret password:
 
-```
+\begin{haskell}
 ghci> sequence (replicate 6 selectChar) p
 "secret"
-```
+\end{haskell}
 
 This illustrative example not only showcases the practical application of the $sequence$ 
 function within the domain of selection functions but also emphasizes its utility in 
@@ -352,12 +351,14 @@ $(k2j \circ j2k) f = f$ and $(j2k \circ k2j) g = g$.
 
 \begin{proof}[J to K Embedding]\\
 The equality $(k2j \circ j2k) f = f$ can be straightforwardly demonstrated by applying all the 
-lambdas and the definitions of $fst$ and $snd$:\\
-$(k2j \circ j2k) f$\\
-\{\{ Apply definitions \}\}\\
-$\iff (\lambda f p \rightarrow f (\lambda x \rightarrow p\:x, x)) (\lambda p \rightarrow snd (p (f (fst \circ p))))$\\
-\{\{ Simplify \}\}\\
-$\iff f$\\
+lambdas and the definitions of $fst$ and $snd$:
+\begin{reasoning}
+  \ind{(k2j \circ j2k) f}
+  \equals{Apply definitions}
+  \ind{(\lambda g\:p_2 \rightarrow g (\lambda x \rightarrow (p_2\:x, x))) (\lambda p_1 \rightarrow snd (p_1 (f (fst \circ p_1))))}
+  \equals{Simplify}
+  \ind{f}
+\end{reasoning}
 \end{proof}
 
 This proof involves a direct application of lambda expressions and the definitions of 
@@ -365,18 +366,20 @@ $fst$ and $snd$ for simplification. To facilitate the proof of the second isomor
 initially introduce the free theorem for the special $K$ type \cite{wadler1989theorems}:
 
 \begin{theorem}[Free Theorem for K]\\
-Given the following functions with their corresponding types:\\
+Given the following functions with their corresponding types:
+\begin{reasoning}
 $g : K_{R,A}$\\
 $h : B_1 \rightarrow B_2$\\
 $p : A \rightarrow (R, B_1)$\\
-We have:\\
-$h (g\:p) = g (\lambda x \rightarrow  \text{ let }(r,y) = p\:x \text{ in }(r,h\:y))$
+\end{reasoning}
+We have:
+\[h (g\:p) = g ((id *** h) \circ p)\]
 \end{theorem}
 
-The free theorem essentially asserts that a function $h$ of type $Y_1 \rightarrow Y_2$, 
+The free theorem essentially asserts that a function $h$ of type $B_1 \rightarrow B_2$, 
 when applied to the result of a selection function, can also be incorporated into the 
 property function and applied to each individual element. This follows from the 
-generalized type of $K$, where the only means of generating $Y_1$ values is through the 
+generalized type of $K$, where the only means of generating $B_1$ values is through the 
 application of $p$. Consequently, it becomes inconsequential whether h is applied to the 
 final result or to each individual intermediate result.
 With the free theorem for $K$, the remaining portion of the isomorphism can now be 
@@ -384,14 +387,15 @@ demonstrated as follows:
 
 \begin{proof}[K to J Embedding]\\
 The equality $(j2k \circ k2j) g = g$ is established through the following steps:\\
-$(j2k \circ k2j) g$\\
-\{\{ Apply definitions and simplify\}\}\\
-$\iff \lambda p \rightarrow snd (p (g (\lambda x \rightarrow ((fst \circ p) x, x))))$\\
-\{\{ Free Theorem for K \}\}\\
-$\iff \lambda p \rightarrow g (\lambda x \rightarrow ((fst \circ p) x, (snd \circ p) x))$\\
-\{\{ Simplify \}\}\\
-$\iff g$\\
-
+\begin{reasoning}
+  \ind{(j2k \circ k2j) g}
+  \equals{Apply definitions and simplify}
+  \ind{\lambda p \rightarrow snd (p (g (\lambda x \rightarrow ((fst \circ p) x, x))))}
+  \equals{Free Theorem for $K$}
+  \ind{\lambda p \rightarrow g (\lambda x \rightarrow ((fst \circ p) x, (snd \circ p) x))}
+  \equals{Simplify}
+  \ind{g}
+\end{reasoning}
 \end{proof}
 
 The monad definitions and $sequence$ definition for the new $K$ type can be derived from 
@@ -460,12 +464,14 @@ Similar to the free theroem for the $K$ type, it is also possible to derive the 
 theorem for the $GK$ type:
 
 \begin{theorem}[Free Theorem for GK]\\
-Given the following functions with thier corresponding types:\\
-$g : GK_{R,A}$\\
-$f : B_1 \rightarrow B_2$\\
-$p : A \rightarrow (R, B_1)$\\
-We have:\\
-$((id *** f) \circ g) p = g ((id *** f) \circ p)$\\
+Given the following functions with thier corresponding types:
+\begin{reasoning}
+  $g : GK_{R,A}$\\
+  $f : B_1 \rightarrow B_2$\\
+  $p : A \rightarrow (R, B_1)$\\
+\end{reasoning}
+We have:
+\[((id *** f) \circ g) p = g ((id *** f) \circ p)\]
 \end{theorem}
 
 It is basically stating the same as the free Theorem for $K$, where given a function $f$
@@ -479,15 +485,16 @@ be embedded into $GK$:
 
 \begin{proof}[K to GK Embedding]\\
 The equality $(k2gk \circ gk2k) f = f$ is established through the following steps:\\
-Assuming: $f : K_{R,A}$\\
-\\
-$(gk2k \circ k2gk) f$\\
-\{\{ Definitions and rewrite \}\}\\
-$\iff (\lambda p \rightarrow (snd \circ f) (\lambda x \rightarrow \text{ let }(r,y) = p\:x\text{ in } (r, (r,y))))$\\
-\{\{ Free theorem of GK \}\}\\
-$\iff (\lambda p \rightarrow f (\lambda x \rightarrow \text{ let }(r,y) = p\:x \text{ in }(r, snd (r,y))))$\\
-\{\{ Simplify \}\}\\
-$\iff f$\\
+Assuming: $f : K_{R,A}$
+\begin{reasoning}
+  \ind{(gk2k \circ k2gk) f}
+  \equals{Definitions and rewrite}
+  \ind{\lambda p \rightarrow (snd \circ f) (\lambda x \rightarrow \text{ let }(r,y) = p\:x\text{ in } (r, (r,y)))}
+  \equals{Free theorem of $GK$}
+  \ind{\lambda p \rightarrow f (\lambda x \rightarrow \text{ let }(r,y) = p\:x \text{ in }(r, snd (r,y)))}
+  \equals{Simplify}
+  \ind{f}
+\end{reasoning}
 \end{proof}
 
 Embedding $K$ selection functions into the new $GK$ type is a little bit more tricky. We
@@ -496,24 +503,25 @@ it's elements. Therefore:
 
 \begin{proof}[GK to K Embedding]\\
 The equality $(k2gk \circ gk2k) g = g$ is established through the following steps:\\
-Assuming that for\\
-$g : GK_{R,A} $\\
-$\forall p : \forall B . (A \rightarrow (R,B))$\\
-$\exists x : A$\\
-such that:\\
-$g\:p = p\:x$\\
-\\
-$(k2gk \circ gk2k) g$\\
-\{\{ Definitions and rewrite \}\}\\
-$\iff \lambda p \rightarrow snd (g(\lambda x \rightarrow \text{ let }(r,y) = p\:x \text{ in }(r, (r,y))))$\\
-\{\{ Assumption \}\}\\
-$\iff \lambda p \rightarrow snd (\exists x. \text{ let }(r,y) = p\:x\text{ in } (r, (r,y)))$\\
-\{\{ exists commuts \}\}\\
-$\iff \lambda p \rightarrow \exists x.\text{ let }(r,y) = p\:x\text{ in }snd (r, (r,y))$\\
-\{\{ Assumption \}\}\\
-$\iff \lambda p \rightarrow g (\lambda x \rightarrow \text{ let }(r,y) = p\:x \text{ in }snd (r, (r,y)))$\\
-\{\{ Simplify \}\}\\
-$\iff g$\\
+Assuming that for:
+\begin{reasoning}
+  $g : GK_{R,A} $\\
+  $\forall p : (\forall B . (A \rightarrow (R,B))), \exists x : A \text{ such that: } g\:p = p\:x$
+\end{reasoning}
+We can reason:
+\begin{reasoning}
+\ind{(k2gk \circ gk2k) g}
+  \equals{Definitions and rewrite}
+  \ind{\lambda p \rightarrow snd (g(\lambda x \rightarrow \text{ let }(r,y) = p\:x \text{ in }(r, (r,y))))}
+  \equals{Assumption}
+  \ind{\lambda p \rightarrow snd (\exists x. \text{ let }(r,y) = p\:x\text{ in } (r, (r,y)))}
+  \equals{Exists commutes}
+  \ind{\lambda p \rightarrow \exists x.\text{ let }(r,y) = p\:x\text{ in }snd (r, (r,y))}
+  \equals{Assumption}
+  \ind{\lambda p \rightarrow g (\lambda x \rightarrow \text{ let }(r,y) = p\:x \text{ in }snd (r, (r,y)))}
+  \equals{Simplify}
+  \ind{g}
+\end{reasoning}
 \end{proof}
 
 
@@ -533,7 +541,7 @@ The monad definition for $GK$ is straightforward:
 Given a selection function $e$ of type $GK_{R A}$, a function $f$ of type 
 $A \rightarrow GK_{R,A}$, and a property function $p$ of type 
 $\forall C. (B \rightarrow (R,C))$, the result of type $(R,C)$ can be constructed by 
-utilizing $e$. Each underlying element $x$ of type $a$ of $e$ will be assessed based on 
+utilizing $e$. Each underlying element $x$ of type $A$ of $e$ will be assessed based on 
 the values produced by applying $f$ to each element $x$. This process results in a pair 
 comprising the $R$ value by which the outcome is judged and the result value of type $C$. 
 Since this pair is already of the correct type, it is sufficient to simply return it.
@@ -547,69 +555,52 @@ With these monad definitions, we'd like to investigate how they relate to the de
 for $J$ or $K$ respectively. We'd like the $GK$ monad to behave in the same way as the $J$
 and $K$ monad does.
 
-In order to dirive we need to introduce the following two theorems:
+In order to dirive the monad definitions from the embedding operators we need to introduce 
+the following two theorems:
 \begin{theorem}[Theorem 1]\\
+Given:
+\begin{reasoning}
 $f : (R,A) \rightarrow (R,B)$\\
 $g : GK_{R,A}$\\
-$p : A \rightarrow (R,A)$\\
-$f (g\:p) = g (f \circ p)$\\
-$\iff (fst \circ f \circ p) = fst \circ p$\\
+$p : A \rightarrow (R,A)$
+\end{reasoning}
+We have:
+\[(fst \circ f \circ p) = fst \circ p\ \implies f (g\:p) = g (f \circ p)\]
 \end{theorem}
-
+This theorem is stating that given a function $f$ that is applied to the result of a 
+selection function of type $GK$, we can also apply $f$ to every underlying element of $GK$
+within the property function, given that $f$ is only changing the $B$ value and not the $R$
+value.
+\newpage
 \begin{proof}[Theorem 1]\\
-Assuming that for:\\
-$g : GK_{R,A}$\\
-$\forall p :: \forall B . (A \circ (R,B))$\\
-$\exists x :: A$\\
-such that:\\
-$g\:p = p\:x$\\
-\begin{haskell}
-f (g p)
-{{ Assumption }}
-= exists x -> f (p x)
-{{ rewrite as tuple }}
-= ((fst . f . p) x, (snd . f . p) x)
-{{ Theorem 1 condition }}
-= ((fst . p ) x , (snd . f . p) x)                                                   
-{{ rewrite as let }}
-= let (r, y) = p x in (r, snd (f (r,y)))                                             
-{{ rewrite as *** }}
-= let (r, y) = p x in (id *** (\y -> snd (f (r,y)))) (r, y)                          
-{{ resolve *** }}
-= let (r, y) = p x in (\(a,b) -> (a, (\y -> snd (f (r,y))) b)) (r, y)                
-{{ apply lambda }}
-= let (r, y) = p x in (\(a,b) -> (a, snd (f (r,b)))) (r, y)                          
-{{ expand let }}
-= let r = fst (p x) in let y = snd (p x) in (\(a,b) -> (a, snd (f (r,b)))) (r, y)    
-{{ remove let }}
-= (\(a,b) -> (a, snd (f (fst (p x), b)))) ((fst (p x)), (snd (p x)))                 
-{{ simplify }}
-= (\(a,b) -> (a, snd (f (fst (p x), b)))) p x                                        
-{{ remove patternmatch in lambda }}
-= (\a -> (fst a, snd (f (fst (p x), snd a)))) p x                                   
-{{ replace (p x) with a within lambda }}
-= (\a -> (fst a, snd (f (fst a, snd a)))) p x                                        
-{{ add patternmatch to lamvda }}
-= (\(r,y) -> (r, snd (f (r, y)))) p x                                                
-{{ Assumption }}
-= (\(r,y) -> (r, snd (f (r, y)))) g p                                                
-{{ free Theorem for GK }}
-= g ((\(r,y) -> (r,  snd (f (r,y)))) . p)                                            
-{{ rewrite (.) }}
-= g (\x -> (\(r,y) -> (r,  snd (f (r,y)))) (p x))                                    
-{{ pull (p x) into lambda }}
-= g (\x -> (fst (p x),  snd (f (fst (p x) ,snd (p x)))))                             
-{{ simplify tuple to p x }}
-= g (\x -> (fst (p x),  snd (f (p x))))                                              
-{{ rewrite with (.) }}
-= g (\x -> ((fst . p) x, (snd . f . p) x))                                           
-{{ expand first bit with theorem condition }}
-= g (\x -> ((fst . f . p) x, (snd . f . p) x))                                       
-{{ simplify tuple to (f . p) x }}
-= g (\x -> (f . p) x)                                                                
-{{ remove lambda }}
-= g (f . p)
-\end{haskell}
+Assuming that for:
+\begin{reasoning}
+$(1)\:f : (R,A) \rightarrow (R,B),g : GK_{R,A}, p : A \rightarrow (R,A)$\\
+$(2)\:\forall p : (\forall B . (A \rightarrow (R,B))), \exists x : A \text{ such that } g\:p = p\:x$\\
+$(3)\:fst \circ f \circ p = fst \circ p$
+\end{reasoning}
+We can reason:
+\begin{reasoning}
+  \ind{f (g\:p)}
+  \equals{Assumption (2)}
+  \ind{\exists x . f (p\:x)}
+  \equals{Rewrite as tuple}
+  \ind{\exists x .((fst \circ f \circ p) x, (snd \circ f \circ p) x)}
+  \equals{Assumption (3)}
+  \ind{\exists x .((fst \circ p ) x , (snd \circ f \circ p) x)}
+  \equals{Rewrite as lambda}
+  \ind{\exists x .(\lambda (r,y) \rightarrow (r, (snd \circ f) (r, y))) p\:x}
+  \equals{Assumption (2)}
+  \ind{(\lambda (r,y) \rightarrow (r, (snd \circ f) (r, y))) g\:p}
+  \equals{Free Theorem for $GK$}
+  \ind{g ((\lambda (r,y) \rightarrow  (r, (snd \circ f) (r,y))) \circ p) }
+  \equals{Rewrite}
+  \ind{g (\lambda x \rightarrow ((fst \circ p) x,  (snd \circ f \circ p) x))}
+  \equals{Assumption (3)}
+  \ind{g (\lambda x \rightarrow ((fst \circ f \circ p) x, (snd \circ f \circ p) x))}
+  \equals{Simplify}
+  \ind{g (f \circ p)}
+\end{reasoning}
 \end{proof}
 
 To further simplify the calculation we aslso introduce the following theorem:
@@ -617,26 +608,38 @@ To further simplify the calculation we aslso introduce the following theorem:
 \begin{theorem}[Theorem 2]\\
 If $q$ does apply $p$ to get the $R$ value but keeps the original value, and we then use that 
 original value to compute the $(R,Z)$ values with $p$ we can call $g$ with $p$ directly.\\
+Given:
+\begin{reasoning}
 $p :: A \rightarrow (R,B)$\\
 $g :: K_{R,A}$\\
-$p (snd (g\:q)) = g p$\\
-where $q = (\lambda x \rightarrow ((fst \circ p) x, x))$\\
+\end{reasoning}
+We have:
+\[(p \circ snd) (g\:q) = g\:p \text{ where } q = (\lambda x \rightarrow ((fst \circ p) x, x))\]
 \end{theorem}
 
 And we can proof Theorem 2 by utilising Theorem 1.
-\begin{proof}[Theorem 1]\\
-\begin{haskell}
-(p . snd) (g q)
-= g (\x -> (p . snd) ((fst . p) x, x))
-= g p
-
-iff 
-(fst . p . snd) (\x -> ((fst . p) x, x))
-= \y -> (fst ( p (snd ( (\x -> ((fst . p) x, x)) y))))
-= \y -> (fst(p(snd ((fst . p) y, y) )))
-= \x -> (fst . p) x
-= fst . (\x -> ((fst . p) x, x)) 
-\end{haskell}
+\begin{proof}[Theorem 2]\\
+\begin{reasoning}
+  \ind{(p \circ snd) (g\:q)}
+  \equals{Definition of $q$}
+  \ind{(p \circ snd) (g\:(\lambda x \rightarrow ((fst \circ p) x, x)))}
+  \equals{Theorem 1}
+  \ind{g (\lambda x \rightarrow (p \circ snd) ((fst \circ p) x, x))}
+  \equals{Simplify}
+  \ind{g\:p}
+\end{reasoning}
+$\iff$
+\begin{reasoning}
+  \ind{(fst \circ p \circ snd) (\lambda x \rightarrow ((fst \circ p) x, x))}
+  \equals{Simplify}
+  \ind{\lambda y \rightarrow (fst ( p (snd ( (\lambda x \rightarrow ((fst \circ p) x, x)) y))))}
+  \equals{Simplify}
+  \ind{\lambda y \rightarrow (fst(p(snd ((fst \circ p) y, y) )))}
+  \equals{Simplify}
+  \ind{\lambda x \rightarrow (fst \circ p) x}
+  \equals{Simplify}
+  \ind{fst \circ (\lambda x \rightarrow ((fst \circ p) x, x))}
+\end{reasoning}
 \end{proof}
 
 -- TODO: Give an intuition what these theorems mean
