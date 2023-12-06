@@ -131,6 +131,7 @@ Performance Optimisation \and Monads.}
 > import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, pred)
 > import Data.Function (on)
 > import Data.List
+  import GHC.Base (TVar#)
   
 }
 
@@ -419,14 +420,37 @@ of the \(sequence\) function. Additionally, attention should be drawn to
 the fact that this example involves redundant calculations. After
 determining the first character of the secret password, the system
 overlooks the prior computation of the entire password and initiates the
-calculation anew for subsequent characters. To address this specific
-inefficiency within the selection monad, concerning the pair and
-sequence functions, two new variations of the selection monad will be
-introduced. Initially, an examination of a new type, denoted as \(K\),
-will reveal its isomorphism to the selection monad \(J\). Subsequently,
-an exploration of the generalization of this \(K\) type will enhance its
-intuitive usability. Remarkably, it will be demonstrated that the \(J\)
-monad can be embedded into this generalized \(K\) type.
+calculation anew for subsequent characters.
+
+\subsection{Efficiency Issues}\label{efficiency-issues}
+
+This inefficiency will be examined in more detail. When the \(sequence\)
+function is utilized for the selection monad, an exhaustive search of
+all possible combinations of the values underlying the selection
+functions is executed. It is assumed that the \(minWith\) function
+precisely applies the property function \(p\) once to each of its
+elements. The efficiency of the \(sequence\) function is scrutinized to
+determine how often the property function \(p\) is invoked during the
+calculation of a solution.
+
+Given that \(sequence\) operates as an exhaustive search resembling a
+tree search with a branching factor of \(K\), the number of times the
+property function \(p\) is called for a tree of depth \(n\) can be
+expressed as \(T(n) = F(n) + T(n-1)\), where \(F(n) = K * T(n-1)\).
+Substituting \(F(n)\) into \(T(n)\) yields
+\(T(n) = K * T(n-1) + T(n-1)\). This simplifies to \(T(n) = (K + 1)^n\).
+While an exhaustive search on a tree can be performed with
+\(T(n) = K^n\) calls of \(p\), the \(sequence\) function duplicates some
+of the work by forgetting previously computed results.
+
+To address this specific inefficiency within the selection monad,
+concerning the pair and sequence functions, two new variations of the
+selection monad will be introduced. Initially, an examination of a new
+specila \(K\) type will reveal its isomorphism to the selection monad
+\(J\). Subsequently, an exploration of the generalization of this \(K\)
+type to the \(GK\) type will enhance its intuitive usability.
+Remarkably, it will be demonstrated that the \(J\) monad can be embedded
+into this general \(GK\) type.
 
 \section{Special K}\label{special-k}
 
@@ -589,7 +613,7 @@ revealed that \(GK\) is not isomorphic to \(J\) and \(K\); instead, they
 can be embedded into \(GK\). Conversely, we will explore a specific
 precondition under which \(GK\) can be embedded into \(J\) or \(K\).
 
-\section{Generalised K}\label{generalised-k}
+\section{General K}\label{general-k}
 
 Consider the more general type \(GK\), derived from the previous special
 \(K\) type:
@@ -620,8 +644,9 @@ according to the provided property function. Furthermore, we define
 
 \begin{code}
 sequenceGK :: [GK r a] -> GK r [a]
-sequenceGK [e] p    = e (\x -> p [x])
-sequenceGK (e:es) p = e (\x -> sequenceGK es (\xs -> p (x:xs)))
+sequenceGK [e] p    = e (\x  -> p [x])
+sequenceGK (e:es) p = e (\x  -> sequenceGK es 
+                        (\xs -> p (x:xs)))
 \end{code}
 
 Following a similar pattern, this \(sequenceGK\) function builds all
@@ -652,8 +677,9 @@ k2gk :: K r a -> GK r a
 k2gk f p = f (\x -> let (r,y) = p x in (r, (r,y)))
 \end{code}
 
-Similar to the free theroem for the \(K\) type, it is also possible to
-derive the free theorem for the \(GK\) type:
+Similar to the free theorem for the \(K\) type, it is equally possible
+to derive the free theorem for the new \(GK\) type
+\cite{wadler1989theorems}:
 
 \begin{theorem}[Free Theorem for GK]\\
 Given the following functions with thier corresponding types:
@@ -666,15 +692,16 @@ We have:
 \[((id *** f) \circ g) p = g ((id *** f) \circ p)\]
 \end{theorem}
 
-It is basically stating the same as the free Theorem for \(K\), where
-given a function \(f\) that is applied to the result of a selection
-function, it dosent matter if this is done in the end to the final
-result, or inside the property function of the selection function. But
-it now needs to account for the fact that the \(GK\) type is also
-returning the \(R\) value.
+This theorem essentially conveys the same concept as the free theorem
+for \(K\). It asserts that given a function \(f\) applied to the result
+of a selection function, the order of application, whether at the final
+stage to the ultimate result or inside the property function of the
+selection function, does not impact the outcome. However, this
+formulation now accommodates the fact that the \(GK\) type also returns
+the \(R\) value.
 
-With the free theorem for \(GK\) we can now proof that selection
-functions of type \(K\) can be embedded into \(GK\):
+With the free theorem for \(GK\), we can establish that selection
+functions of type \(K\) can be seamlessly embedded into \(GK\):
 
 \begin{proof}[K to GK Embedding]\\
 The equality $(k2gk \circ gk2k) f = f$ is established through the following steps:\\
@@ -690,10 +717,10 @@ Assuming: $f : K_{R,A}$
 \end{reasoning}
 \end{proof}
 
-Embedding \(K\) selection functions into the new \(GK\) type is a little
-bit more tricky. We essentially need to make sure that \(g\) is not
-changing the \(R\) value after applying \(p\) to it's elements.
-Therefore:
+Embedding \(K\) selection functions into the new \(GK\) type introduces
+a slightly more intricate process. The key requirement is to ensure that
+the function \(g\) does not alter the \(R\) value subsequent to applying
+\(p\) to its elements. Hence:
 
 \begin{proof}[GK to K Embedding]\\
 The equality $(k2gk \circ gk2k) g = g$ is established through the following steps:\\
@@ -718,71 +745,68 @@ We can reason:
 \end{reasoning}
 \end{proof}
 
-\begin{itemize}
-\tightlist
-\item
-  counterexamples to ilustrate what precondition means and why we want
-  it
-\item
-  introduce new theorem baced on free theorem and precondition
-\item
-  calculate monad definition from k2j and j2k
-\end{itemize}
+TODO: - elaborate on the precondition for the embedding -
+counterexamples to ilustrate what precondition means and why we want it
 
 \section{GK forms a monad}\label{gk-forms-a-monad}
 
-The monad definition for \(GK\) is straightforward:
+The formation of the monad for \(GK\) follows a straightforward
+definition:
 
 \begin{code}
 bindGK :: GK r a -> (a -> GK r b) -> GK r b
 bindGK e f p = e (\x -> f x p)
 \end{code}
 
-Given a selection function \(e\) of type \(GK_{R A}\), a function \(f\)
-of type \(A \rightarrow GK_{R,A}\), and a property function \(p\) of
-type \(\forall C. (B \rightarrow (R,C))\), the result of type \((R,C)\)
-can be constructed by utilizing \(e\). Each underlying element \(x\) of
-type \(A\) of \(e\) will be assessed based on the values produced by
-applying \(f\) to each element \(x\). This process results in a pair
-comprising the \(R\) value by which the outcome is judged and the result
-value of type \(C\). Since this pair is already of the correct type, it
-is sufficient to simply return it.
+In this context, given a selection function \(e\) of type \(GK_{R A}\),
+a function \(f\) of type \(A \rightarrow GK_{R,A}\), and a property
+function \(p\) of type \(\forall C. (B \rightarrow (R,C))\), the outcome
+of type \((R,C)\) is assembled through the utilization of \(e\). Each
+element \(x\) of type \(A\) underlying \(e\) undergoes assessment by
+applying \(f\). This process yields a pair consisting of the \(R\)
+value, which serves as the basis for judgment, and the result value of
+type \(C\). As the pair is already of the correct type, a
+straightforward return suffices.
+
+The return for the \(GK\) type is defined as follows:
 
 \begin{code}
 returnGK :: a -> GK r a
 returnGK x p = p x
 \end{code}
 
-The proofs for the monad laws are attached in the appendix.
+The proofs substantiating the monad laws are annexed in the appendix.
 
-With these monad definitions, we'd like to investigate how they relate
-to the definitions for \(J\) or \(K\) respectively. We'd like the \(GK\)
-monad to behave in the same way as the \(J\) and \(K\) monad does.
+Exploring the alignment of these monad definitions with those of \(J\)
+or \(K\), respectively, is our next objective. The aim is to ensure that
+the behavior of the \(GK\) monad aligns with that of the \(J\) and \(K\)
+monads.
 
-In order to dirive the monad definitions from the embedding operators we
-need to introduce the following two theorems:
+To derive the monad definitions from the embedding operators, it is
+imperative to introduce the following two theorems:
 
 \begin{theorem}[Theorem 1]\\
 Given:
 \begin{reasoning}
-$f : (R,A) \rightarrow (R,B)$\\
+$f : (R,B_1) \rightarrow (R,B_2)$\\
 $g : GK_{R,A}$\\
-$p : A \rightarrow (R,A)$
+$p : A \rightarrow (R,B_1)$
 \end{reasoning}
 We have:
-\[(fst \circ f \circ p) = fst \circ p\ \implies f (g\:p) = g (f \circ p)\]
+\[fst \circ f \circ p = fst \circ p\ \implies (f \circ g)p = g (f \circ p)\]
 \end{theorem}
 
-This theorem is stating that given a function \(f\) that is applied to
-the result of a selection function of type \(GK\), we can also apply
-\(f\) to every underlying element of \(GK\) within the property
-function, given that \(f\) is only changing the \(B\) value and not the
-\(R\) value. \newpage
+This theorem asserts that when we have a function \(f\) applied to the
+outcome of a selection function of type \(GK_{R,A}\), we can similarly
+apply \(f\) to each underlying element of \(GK{R,A}\) within the
+property function. This is contingent upon the condition that \(f\) only
+modifies the \(B\) value and does not alter the \(R\) value.
 
+\newpage
 \begin{proof}[Theorem 1]\\
 Assuming that for:
 \begin{reasoning}
-$(1)\:f : (R,A) \rightarrow (R,B),g : GK_{R,A}, p : A \rightarrow (R,A)$\\
+$(1)\:f : (R,B_1) \rightarrow (R,B_2),g : GK_{R,A}, p : A \rightarrow (R,B_1)$\\
 $(2)\:\forall p : (\forall B . (A \rightarrow (R,B))), \exists x : A \text{ such that } g\:p = p\:x$\\
 $(3)\:fst \circ f \circ p = fst \circ p$
 \end{reasoning}
@@ -822,7 +846,7 @@ $p :: A \rightarrow (R,B)$\\
 $g :: K_{R,A}$\\
 \end{reasoning}
 We have:
-\[(p \circ snd) (g\:q) = g\:p \text{ where } q = (\lambda x \rightarrow ((fst \circ p) x, x))\]
+\[(p \circ snd) (g\:q) = g\:p \text{ where } q = \lambda x \rightarrow ((fst \circ p) x, x)\]
 \end{theorem}
 
 And we can proof Theorem 2 by utilising Theorem 1.
@@ -870,31 +894,32 @@ We can calculate the bind implementation for \(GK\) with the \(j2gk\)
 and \(gk2j\) operators and the previusly introduced theorems:
 
 \begin{proof}[GK Monad behaves similar to J]\\
-\begin{haskell}
-j2gk ((>>=) (gk2j f) (\x -> gk2j (g x)))                                                         
-{{ Definition of (>>=) }}
-= j2gk ((\f g p -> g (f (p . flip g p)) p) (gk2j f) (\x -> gk2j (g x)))
-{{ Simplify }}
-= j2gk (\p -> gk2j (g (gk2j f (p . (\x -> gk2j (g x) p)))) p)
-{{ Definition of j2gk and rewrite }}
-= \p -> p (gk2j (g (gk2j f (\x -> fst ((p . snd) ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))
-{{ Theorem 1 }}
-= \p -> p (gk2j (g (gk2j f (\x -> fst (((g x) (\x -> (p . snd) ((fst . p) x, x))))))) (fst . p))
-{{Definition of j2gk and rewrite }}                  
-= \p -> p (snd (g (snd (f (\x -> (fst (g x p), x)))) (\x -> ((fst . p) x, x))))
-{{ Theorem 2 }}
-= \p -> g (snd (f (\x -> (fst (g x p), x)))) p
-{{ Rewrite }}
-= \p -> (\y -> g (snd y) p) (f (\x -> (fst (g x p), x)))
-{{ Theorem 1 }}
-= \p -> f ((\y -> g (snd y) p) . (\x -> (fst (g x p), x)))  
-{{ Simplify }}
-\p -> f (\x -> g x p)
-\end{haskell}
+\begin{reasoning}
+  \ind{j2gk (gk2j\:f >>= gk2j \circ g)}
+  \equals{Definition of $J_{>>=}$}
+  \ind{j2gk ((\lambda f\:g\:p \rightarrow g (f (p \circ flip\:g\:p)) p) (gk2j\:f) (gk2j \circ g))}
+  \equals{simplify}
+  \ind{j2gk (\lambda p \rightarrow gk2j (g (gk2j\:f (p \circ (\lambda x \rightarrow gk2j (g\:x) p)))) p)}
+  \equals{Definition of j2k and rewrite}
+  \ind{\lambda p \rightarrow p (gk2j (g (gk2j f (\lambda x \rightarrow fst ((p \circ snd) ((g\:x) (\lambda x \rightarrow ((fst \circ p) x, x))))))) (fst \circ p))}
+  \equals{Theorem 1}
+  \ind{\lambda p \rightarrow p (gk2j (g (gk2j f (\lambda x \rightarrow fst (((g\:x) (\lambda x \rightarrow (p \circ snd) ((fst \circ p) x, x))))))) (fst \circ p))}
+  \equals{Definition of j2gk and rewrite}
+  \ind{\lambda p \rightarrow p (snd (g (snd (f (\lambda x \rightarrow (fst (g\:x\:p), x)))) (\lambda x \rightarrow ((fst \circ p) x, x))))}
+  \equals{Theorem 2}
+  \ind{\lambda p \rightarrow g (snd (f (\lambda x \rightarrow (fst (g\:x\:p), x)))) p}
+  \equals{Rewrite}
+  \ind{\lambda p \rightarrow (\lambda y \rightarrow g (snd\:y) p) (f (\lambda x \rightarrow (fst (g\:x\:p), x)))}
+  \equals{Theorem 1}
+  \ind{\lambda p \rightarrow f ((\lambda y \rightarrow g (snd\:y) p) \circ (\lambda x \rightarrow (fst (g\:x\:p), x))) }
+  \equals{Simplify}
+  \ind{\lambda p \rightarrow f (\lambda x \rightarrow g\:x\:p)}
+\end{reasoning}
 \end{proof}
 
-This shows that all \(GK\) selection functions behave the same when
-transforemd to \(K\) or \(J\) selection functions.
+This shows that all \(GK\) selection functions sattisfing the
+precodition behave the same when transforemd to \(K\) or \(J\) selection
+functions.
 
 \begin{itemize}
 \tightlist
@@ -922,7 +947,7 @@ transforemd to \(K\) or \(J\) selection functions.
   It can also be used for greedy algorythms, however this performance
   optimisation does not apply in this case
 \item
-  But greedy algorythms can also be represented with the new generalised
+  But greedy algorythms can also be represented with the new General
   selection monad
 \end{itemize}
 
@@ -941,7 +966,7 @@ transforemd to \(K\) or \(J\) selection functions.
 \begin{itemize}
 \tightlist
 \item
-  We should use generalised K istead of J because more useful and more
+  We should use General K istead of J because more useful and more
   intuitive once understood
 \item
   performance improvements are useful
