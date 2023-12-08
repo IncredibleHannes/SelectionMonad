@@ -70,7 +70,7 @@ subsequent discussions on optimizations.
 Selection Functions
 ===================
 
-Consider the type for selection functions introduced by Paulo Olvia and Martin Escardo 
+Consider the type for selection functions introduced by Paulo Oliva and Martin Escardo 
 \cite{escardo2010selection} :
 
 > type J r a = (a -> r) -> a
@@ -223,7 +223,7 @@ established Haskell conventions.
 Illustration of Sequence in the Context of Selection Functions
 --------------------------------------------------------------
 
-To ilustrate the application of the sequence function within the domain of selection 
+To illustrate the application of the sequence function within the domain of selection 
 functions, consider a practical scenario \cite{hartmann2022algorithm}: the task of 
 cracking a secret password. In this hypothetical situation, a black box property function 
 $p$ is provided that returns wether the correct password is entered. Additionally, knowledge is assumed that the password is six characters long:
