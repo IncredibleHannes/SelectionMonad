@@ -94,7 +94,7 @@
 \institute{
     University of Oxford, Department of Computer Science, UK
     \email{firstname.lastname@cs.ox.ac.uk}\and 
-    KULeuven, Department of ComputerScience, Belgium,
+    KU Leuven, Department of Computer Science, Belgium,
     \email{tom.schrijvers@kuleuven.be}
 }
 
@@ -114,7 +114,7 @@ performance improvements and enhanced intuitive usability are observed.
 The embedding between \(J\) to \(GK\) is established, offering a more
 efficient and expressive alternative to the well established \(J\) type
 for selection functions. The findings emphasize the advantages of the
-Generalized Selection Monad and its applicability in diverse scenarios,
+generalized selection monad and its applicability in diverse scenarios,
 paving the way for further exploration and optimization.
 
 \keywords{Selection monad  \and Functional programming \and Algorithm design \and 
@@ -166,21 +166,20 @@ versatility for a wide array of applications involving the selection
 monad.
 
 The upcoming section delves into the selection monad, with a particular
-focus on the type:\\
-\((A \rightarrow R) \rightarrow A\) representing selection functions
-\cite{escardo2010selection}. The exploration of the \(pair\) function
-highlights its ability to compute a new selection function based on
-criteria from two existing functions. Supported by a practical example
-involving decision-making scenarios and individuals navigating paths,
-this section underscores the functionality of selection functions. An
-analysis of the inefficiencies in the original \(pair\) function
-identifies redundant computational work. The paper's primary
-contribution is outlined: an illustration and proposal for an efficient
-solution to enhance the performance of the \(pair\) function. This
-introductory overview sets the stage for a detailed exploration of the
-selection monad and subsequent discussions on optimizations.
+focus on the type: \((A \rightarrow R) \rightarrow A\) representing
+selection functions \cite{escardo2010selection}. The exploration of the
+\(pair\) function highlights its ability to compute a new selection
+function based on criteria from two existing functions. Supported by a
+practical example involving decision-making scenarios and individuals
+navigating paths, this section underscores the functionality of
+selection functions. An analysis of the inefficiencies in the original
+\(pair\) function identifies redundant computational work. The paper's
+primary contribution is outlined: an illustration and proposal for an
+efficient solution to enhance the performance of the \(pair\) function.
+This introductory overview sets the stage for a detailed exploration of
+the selection monad and subsequent discussions on optimizations.
 
-\section{Selection functions}\label{selection-functions}
+\section{Selection Functions}\label{selection-functions}
 
 Consider the type for selection functions introduced by Paulo Olvia and
 Martin Escardo \cite{escardo2010selection} :
@@ -189,19 +188,20 @@ Martin Escardo \cite{escardo2010selection} :
 type J r a = (a -> r) -> a
 \end{code}
 
-Consider the following example. Two individuals are walking towards each
-other on the pavement. A collision is imminent. At this juncture, each
-individual must decide their next move. This decision-making process can
-be modeled using selection functions. The decision they need to make is
-going towards the street the or the wall:
+Now have a look at the following example. Two individuals are walking
+towards each other on the pavement. A collision is imminent. At this
+juncture, each individual must decide their next move. This
+decision-making process can be modeled using selection functions. The
+decision they need to make is going towards the street the or wall:
 
 \begin{code}
-data Decision = Street | Wall deriving Show
+data Decision = Street | Wall 
 \end{code}
 
-The respective selection functions decide given a property function that
-tells them what decision is the correct one, select the correct one, and
-if there is no correct one, they default to walking towards the wall.
+The respective selection functions given a property function that tells
+them what decision is a good one, select the best one. If there are
+multiple best solutions, they select an abitrary one. And if there is no
+correct one, they default to walking towards the wall.
 
 \begin{code}
 s :: J Bool Decision
@@ -227,9 +227,7 @@ and \(False\) otherwise.
 
 \begin{code}
 pred :: (Decision, Decision) -> Bool
-pred (Wall,Street) = True
-pred (Street,Wall) = True
-pred _             = False
+pred (d1, d2) = d1 /= d2
 \end{code}
 
 The \(pair\) function, merges the two selection functions into a new one
@@ -260,8 +258,8 @@ Upon the determination of an optimal \(A\), a corresponding \(B\) can
 then be computed as \(g (\lambda y \rightarrow p (a,y))\). In this case,
 the \(pair\) function can be conceptualized as a function that
 constructs all possible combinations of the elements within the provided
-selection function and subsequently identifies the overall optimal
-one.It might feel intuitive to consider the following modified \(pair\)
+selection function and subsequently identifies the overall optimal one.
+It might feel intuitive to consider the following modified \(pair\)
 function that seems to be more symmetric.
 
 \begin{code}
@@ -277,12 +275,12 @@ results in a overall non optimal solution.
 
 \begin{haskell}
 ghci> pair' p1 p2 pred
-(Left,Left)
+(Wall,Wall)
 \end{haskell}
 
 This illustrates how the original \(pair\) function keeps track of its
 first decision when determining its second element. It is noteworthy
-that, in the example example, achieving a satisfying outcome for both
+that, in the example, achieving a satisfying outcome for both
 pedestrians is only possible when they consider the direction the other
 one is heading. The specific destination does not matter, as long as
 they are moving in different directions. Consequently, the original
@@ -292,7 +290,7 @@ whereas our modified \(pair'\) does not. An issue with the original
 \(pair\) function might have been identified by the attentive reader.
 There is redundant computational work involved. Initially, all possible
 pairs are constructed to determine an optimal first element \(A\), but
-the corresponding \(A\) that renders it an overall optimal solution is
+the corresponding \(B\) that renders it an overall optimal solution is
 overlooked, resulting in only \(A\) being returned. Subsequently, the
 optimal \(B\) is recalculated based on the already determined optimal
 \(A\) when selecting the second element of the pair. The primary
@@ -350,6 +348,7 @@ function for monads, referred to as \(sequence'\), defined as:
 
 \begin{code}
 sequence' :: [J r a] -> J r [a]
+sequence' []     = return []
 sequence' (ma:mas) = ma >>= 
                     \x -> sequence' mas >>= 
                     \xs -> return (x:xs)
@@ -364,13 +363,13 @@ Haskell conventions.
 \subsection{Illustration of Sequence in the Context of Selection
 Functions}\label{illustration-of-sequence-in-the-context-of-selection-functions}
 
-To ilustrate the application of the sequence funct ion within the domain
+To ilustrate the application of the sequence function within the domain
 of selection functions, consider a practical scenario
 \cite{hartmann2022algorithm}: the task of cracking a secret password. In
 this hypothetical situation, a black box property function \(p\) is
-provided that returns \(True\) if the correct password is entered and
-\(False\) otherwise. Additionally, knowledge is assumed that the
-password is six characters long:
+provided that returns wether the correct password is entered.
+Additionally, knowledge is assumed that the password is six characters
+long:
 
 \begin{code}
 p :: String -> Bool
@@ -409,10 +408,10 @@ ghci> sequence (replicate 6 selectChar) p
 "secret"
 \end{haskell}
 
-This illustrative example not only showcases the practical application
-of the \(sequence\) function within the domain of selection functions
-but also emphasizes its utility in addressing real-world problems, such
-as scenarios involving password cracking. Notably, there is no need to
+This illustrative example not only showcases the application of the
+\(sequence\) function within the domain of selection functions but also
+emphasizes its utility in addressing real-world problems, such as
+scenarios involving password cracking. Notably, there is no need to
 explicitly specify a property function for judging individual character;
 rather, this property function is constructed within the monads bind
 definition, and its utilization is facilitated through the application
@@ -446,7 +445,7 @@ of the work by forgetting previously computed results.
 To address this specific inefficiency within the selection monad,
 concerning the pair and sequence functions, two new variations of the
 selection monad will be introduced. Initially, an examination of a new
-specila \(K\) type will reveal its isomorphism to the selection monad
+specil \(K\) type will reveal its isomorphism to the selection monad
 \(J\). Subsequently, an exploration of the generalization of this \(K\)
 type to the \(GK\) type will enhance its intuitive usability.
 Remarkably, it will be demonstrated that the \(J\) monad can be embedded
@@ -460,7 +459,7 @@ The following type \(K\) is to be considered:
 type K r a = forall b. (a -> (r,b)) -> b
 \end{code}
 
-While selection functions of type \(J\) are still in anticipation of a
+While selection functions of type \(J\) are in anticipation of a
 property function capable of judging their underlying elements, a
 similar operation is performed by the new \(K\) type. The property
 function of the \(K\) type also assesses its elements by transforming
@@ -490,7 +489,7 @@ The \(sequenceK\) for this novel \(K\) type can be defined as follows:
 
 \begin{code}
 sequenceK :: [K r a] -> K r [a]
-sequenceK [e] p    = e (\x -> p [x])
+sequenceK [] p     = p []
 sequenceK (e:es) p = e (\x -> sequenceK es 
                        (\xs -> let (r,y) = p (x:xs) 
                                in (r,(r,y))))
@@ -502,8 +501,8 @@ entire solution pair, returning these in place of the result value. The
 selection function one layer above then unpacks the result pair,
 allowing the entire solution to be propagated. The efficiency issues
 previously outlined are addressed by these novel \(pairK\) and
-\(sequenceK\) functions. It will be further demonstrated that this fresh
-\(K\) type is isomorphic to the preceding \(J\) type. This essentially
+\(sequenceK\) functions. It will be further demonstrated that this \(K\)
+type is isomorphic to the preceding \(J\) type. This essentially
 empowers the transformation of every problem previously solved with the
 \(J\) type into the world of the \(K\) type. Subsequently, the solutions
 can be computed more efficiently before being transformed back to
@@ -834,7 +833,7 @@ We can reason:
 \end{reasoning}
 \end{proof}
 
-To further simplify the calculation we aslso introduce the following
+To further simplify the calculation we also introduce the following
 theorem:
 
 \begin{theorem}[Theorem 2]\\
