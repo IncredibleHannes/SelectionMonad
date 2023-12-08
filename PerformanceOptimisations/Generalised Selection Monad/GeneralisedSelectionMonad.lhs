@@ -30,8 +30,8 @@ abstract:
   exploration and optimization.
 ---
 
-Introduction to the Selection Monad J
-=====================================
+Introduction
+============
 
 The selection monad, initially introduced by Paulo Oliva and Martin Escardo 
 \cite{escardo2010selection}, serves as a valuable tool for modeling selection-based 
