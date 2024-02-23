@@ -249,7 +249,7 @@ satisfying the specified property function:
 > selectChar :: J Bool Char
 > selectChar = maxWith ['a'..'z']
 
-It's worth noting that the use of maxWith is facilitated by the ordered nature of booleans
+It's worth noting that the use of $maxWith$ is facilitated by the ordered nature of booleans
 in Haskell, where $True$ is considered greater than $False$. Leveraging this selection 
 function, the sequence function can be employed on a list comprising six identical copies 
 of $selectChar$ to successfully crack the secret password. Each instance of the selection 
@@ -440,7 +440,7 @@ the result value, appears more intuitive. This shift is elaborated upon in the f
 section, where $GK$ is observed to facilitate similar performance improvements while 
 simplifying the definitions. This method also removes the need for unnecessary data 
 copying. Nevertheless, it is disclosed that $GK$ is not isomorphic to $J$ and $K$ but 
-rather can be embedded into $GK$. In contrast, an investigation into a specific 
+rather these can be embedded into $GK$. In contrast, an investigation into a specific 
 precondition allowing for $GK$ to be embedded into $J$ or $K$ is presented.
 
 General K
@@ -638,7 +638,7 @@ It follows:
   \[j2gk (gk2j\:f >>= gk2j \circ g) = bindGk f g\]
 \end{theorem}
 
-To derive the monad definitions from the embedding operators, it is imperative to 
+To derive the monad definitions from the embedding operators, it is convenient to 
 introduce the following two lemmas:
 
 \begin{lemma}
@@ -821,7 +821,7 @@ function explores $10$ possible elements, the search space size is $10^6$. This 
 space can be conceptualised as a tree with a depth $n$ of $6$ and a branching factor $K$ 
 of $10$. By employing the respective $sequence$ function for each type, along with the 
 corresponding property function, an initial analysis of runtime and space complexity was
-conducted within GHCI.
+conducted within GHCi.
 
 \begin{haskell}
 ghci> sequence js pJ 
@@ -837,7 +837,7 @@ ghci> sequenceGK gks pK
 (1.56 secs, 869,778,256 bytes)
 \end{haskell}
 
-The results obtained from GHCI already demonstrate a significant improvement in 
+The results obtained from GHCi already demonstrate a significant improvement in 
 performance for the $GK$ and $K$ monad. It further highlights the space efficiency of the 
 $GK$ monad over the $J$ and $K$ monad, while further showing the significant memory
 overhead of the $K$ type, that is due to the nested duplications of the final solution.
@@ -941,7 +941,7 @@ but also a more intuitive and practical approach to monad, pair, and sequence
 implementations.
 
 The core argument for transitioning to the $GK$ monad stems from its utility and intuitive 
-nature, which, though may require a slight learning curve, ultimately provides a more 
+nature, which, though it may require a slight learning curve, ultimately provides a more 
 efficient and user-friendly programming experience. The performance enhancements 
 associated with the $GK$ monad are not merely theoretical but have practical implications 
 for the execution of complex algorithms and the overall computational efficiency.
