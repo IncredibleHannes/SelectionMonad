@@ -184,6 +184,7 @@ p _ = (1,1)
 
 -- Making K a monad
 
+{--
 (>>=) :: K r x -> (x -> K r y) -> K r y
 e >>= f = e . flip f 
 
@@ -205,7 +206,7 @@ sequence []     = return []
 sequence (e:es) = e >>= (
                   \x -> sequence es >>= 
                   \xs -> return (x:xs))
-
+--}
 {--
 -- Monad Laws
 

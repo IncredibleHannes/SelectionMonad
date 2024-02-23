@@ -114,7 +114,7 @@ pair function are identified. To address these issues, a specialised
 type \(K\) is introduced, and its isomorphism to \(J\) is demonstrated.
 The paper further generalises the \(K\) type to \(GK\), where
 performance improvements and enhanced intuitive usability are observed.
-The embedding between \(J\) to \(GK\) is established, offering a more
+The embeddings between \(J\) and \(GK\) are established, offering a more
 efficient and expressive alternative to the well established \(J\) type
 for selection functions. The findings emphasise the advantages of the
 generalised selection monad and its applicability in diverse scenarios,
@@ -134,9 +134,8 @@ Performance Optimisation \and Monads.}
 > import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, pred)
 > import Data.Function (on)
 > import Data.List
-> import Debug.Trace
-  import GHC.Exts (the)
-  
+> import Debug.Trace  
+
 }
 
 \section{Introduction}\label{introduction}
@@ -185,6 +184,8 @@ for an efficient solution to enhance the performance of the \(pair\)
 function. This introductory overview sets the stage for a detailed
 exploration of the selection monad and subsequent discussions on
 optimisations.
+
+All examples in this paper are modeled using Haskell.
 
 \section{Selection Functions}\label{selection-functions}
 
@@ -1166,10 +1167,10 @@ type. Investigating this could determine if the efficiencies intrinsic
 to the \(GK\) monad might present any benefits for greedy algorithms,
 given their already optimal performance under the \(J\) type.
 
-Jules Hedges' contributions have laid a solid foundation in
-understanding the monad transformer for the conventional \(J\) selection
-monad \cite{hedges2014monad}. This work has illuminated the potential
-for integrating selection functions into more intricate computational
+Jules Hedges contributions have laid a solid foundation in understanding
+the monad transformer for the conventional \(J\) selection monad
+\cite{hedges2014monad}. This work has illuminated the potential for
+integrating selection functions into more intricate computational
 constructs. Future research should consider extending these insights to
 the \(GK\) type through the development of a corresponding monad
 transformer. Such endeavors could reveal new applications, potentially

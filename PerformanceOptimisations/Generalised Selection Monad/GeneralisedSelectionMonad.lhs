@@ -6,11 +6,9 @@
 > import Prelude hiding ((>>=), return, pure, (<*>), fmap, sequence, pred)
 > import Data.Function (on)
 > import Data.List
-> import Debug.Trace
-  import GHC.Exts (the)
-  
-}
+> import Debug.Trace  
 
+}
 ---
 title: Towards a more efficient Selection Monad
 ---
@@ -44,7 +42,6 @@ Additionally, it has been effectively employed in modeling greedy algorithms
 \cite{hartmann2022algorithm}. These diverse applications of the selection monad heavily 
 rely on its monadic behavior, particularly emphasising the use of the $sequence$ function 
 for monads.
-
 
 However, within the context of the selection monad, it becomes apparent that the 
 monadic behavior of the selection monad $J$ is needlessly inefficient. This inefficiency 
@@ -277,12 +274,12 @@ calculation anew for subsequent characters.
 Efficiency Issues
 -----------------
 
-This inefficiency will be examined in more detail. When the $sequence$ function is 
-utilised for the selection monad, an exhaustive search of all possible combinations of the 
-values underlying the selection functions is executed. It is assumed that the $minWith$ 
-function precisely applies the property function $p$ once to each of its elements. The 
-efficiency of the $sequence$ function is scrutinised to determine how often the property 
-function $p$ is invoked during the calculation of a solution.
+Lets examine this inefficiency in more detail. When the $sequence$ function is utilised 
+for the selection monad, an exhaustive search of all possible combinations of the values 
+underlying the selection functions is executed. It is assumed that the $minWith$ function 
+precisely applies the property function $p$ once to each of its elements. The efficiency 
+of the $sequence$ function is scrutinised to determine how often the property function $p$ 
+is invoked during the calculation of a solution.
 
 Given that $sequence$ operates as an exhaustive search resembling a tree search with a 
 branching factor of $K$, the number of times the property function $p$ is called for a 
@@ -495,7 +492,6 @@ gk2k f = snd . f
 > k2gk :: K r a -> GK r a
 > k2gk f p = f (\x -> let (r,y) = p x in (r, (r,y)))
 
-
 Similar to the free theorem for the $K$ type, it is equally possible to derive the free 
 theorem \cite{wadler1989theorems} for the new $GK$ type:
 
@@ -563,7 +559,6 @@ It follows:
 \[(k2gk \circ gk2k) g = g\]
 \end{theorem}
 
-
 The essential condition is that the selection function $g$ should not modify the $R$ value 
 after $p$ has been applied to its elements. Given this precondition, the embedding can be 
 proven as follows:
@@ -619,15 +614,13 @@ The proofs substantiating the monad laws are annexed in the appendix.
 
 Exploring the alignment of these monad definitions with those of $J$ or $K$, respectively, 
 is our next objective. The aim is to ensure that the behavior of the $GK$ monad aligns 
-with that of the $J$ and $K$ monads.
-Therefore, consider the following two operators that transform between $GK$ selection 
-functions and $J$ selection functions:
+with that of the $J$ and $K$ monads. Therefore, consider the following two operators that 
+transform between $GK$ selection functions and $J$ selection functions:
 
-> j2gk :: J r x -> GK r x
+> j2gk :: J r a -> GK r a
 > j2gk f p = p (f (fst . p))
 
-
-> gk2j :: GK r x -> J r x
+> gk2j :: GK r a -> J r a
 > gk2j f p = snd (f (\x -> (p x, x)))
 
 Utilising these operators, it can be shown that the $GK$ monad definition aligns with the 
@@ -658,7 +651,6 @@ $p : A \rightarrow (R,B_1)$
 It follows:
 \[fst \circ f \circ p = fst \circ p\ \implies (f \circ g)p = g (f \circ p)\]
 \end{lemma}
-
 
 This lemma asserts that given a function $f$ acting upon the result of a selection 
 function of type $GK_{R,A}$, it is possible to apply $f$ to each element of $GK_{R,A}$ 
@@ -714,6 +706,7 @@ x)\]
 \end{lemma}
 
 To prove Lemma 2, Lemma 1 is utilised:
+
 \begin{proof}[Lemma 2]\\
 \begin{reasoning}
   \ind{(p \circ snd) (g\:q)}
@@ -776,7 +769,6 @@ $gk2j$ operators and the previously introduced theorems:
 This shows that all $GK$ selection functions fulfilling the precondition behave the same 
 when transformed to $K$ or $J$ selection functions.
 
-
 Performance Analysis
 ====================
 
@@ -811,7 +803,6 @@ functions simply sum up the elements of a given list of integers.
 > pK :: [Int] -> (Int, [Int])
 > pK x = (sum x, x)
 
-
 A list of selection functions for each type is further defined. A list of integers is 
 searched by each individual selection function, which then selects the integer that will 
 maximise a given property function.
@@ -824,7 +815,6 @@ maximise a given property function.
 
 > gks :: [GK Int Int]
 > gks = replicate 6 (maxWithGK [1..10])
-
 
 Considering a list of selection functions with a length of $6$, where each selection 
 function explores $10$ possible elements, the search space size is $10^6$. This search 
@@ -921,7 +911,7 @@ modeling of greedy algorithms using the new $GK$ type. Investigating this could 
 if the efficiencies intrinsic to the $GK$ monad might present any benefits for greedy 
 algorithms, given their already optimal performance under the $J$ type.
 
-Jules Hedges’ contributions have laid a solid foundation in understanding the monad 
+Jules Hedges contributions have laid a solid foundation in understanding the monad 
 transformer for the conventional $J$ selection monad \cite{hedges2014monad}. This work has 
 illuminated the potential for integrating selection functions into more intricate 
 computational constructs. Future research should consider extending these insights to the 
@@ -977,7 +967,6 @@ the $GK$ type's advantages to foster a more efficient, intuitive, and robust fun
 programming environment. The transition to the $GK$ type represents a forward-thinking 
 approach to functional programming, promising improvements in both the development and 
 execution of complex computational tasks.
-
 
 --- 
 appendix:

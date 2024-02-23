@@ -35,22 +35,24 @@ g p = p x
 these K's are isomorpic to J
 -}
 
+--bindJ f g p = g (f (p . flip g p)) p
+
 bindK :: K r x -> (x -> K r y) -> K r y
-bindK f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))
+--bindK f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))
 --equivalent by substitution
---bindK f g = j2k (bindJ (k2j f) (\x -> k2j (g x)))                                                         -- definition of bindJ
---bindK f g = j2k ((\f g p -> g (f (p . flip g p)) p) (k2j f) (\x -> k2j (g x)))                            -- lambda application
+--bindK f g = j2k (k2j f `bindJ` (k2j . g))                                                         -- definition of bindJ
+--bindK f g = j2k ((\f g p -> g (f (p . flip g p)) p) (k2j f) (k2j . g))                            -- lambda application
+bindK f g = j2k ((\f g p -> g (f (p . ((\x y ->  g y x) p))) p) (k2j f) (k2j . g)) 
 --bindK f g = j2k ((\p -> (\x -> k2j (g x)) ((k2j f) (p . flip (\x -> k2j (g x)) p)) p))                    -- lambda application
 --bindK f g = j2k (\p -> k2j (g (k2j f (p . (flip (\x -> k2j (g x))) p))) p)                                -- definition of flip
 --bindK f g = j2k (\p -> k2j (g (k2j f (p . ((\x y -> (\x -> k2j (g x)) y x) ) p))) p)                      -- lambda application
 --bindK f g = j2k (\p -> k2j (g (k2j f (p . (\x y -> k2j (g y) x) p))) p)                                   -- lambda application
--- *************** Alternative route below *******************
 --bindK f g = j2k (\p -> k2j (g (k2j f (p . (\x -> k2j (g x) p)))) p)                                       -- def j2k
 --bindK f g p = p ( k2j (g (k2j f ((fst . p) . (\x -> k2j (g x) (fst . p))))) (fst . p))                    -- apply lambda
 --bindK f g p = p (k2j (g (k2j f (fst . p . (\x -> k2j (g x) (fst . p))))) (fst . p))                       -- def k2j
 --bindK f g p = p (k2j (g (k2j f (fst . p . (\x -> snd ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))      -- rewrite lambda
 --bindK f g p = p (k2j (g (k2j f (\x -> (fst . p . snd) ((g x) (\x -> ((fst . p) x, x)))  ))) (fst . p))    -- rewrite composition
---bindK f g p = p (k2j (g (k2j f (\x -> fst ((p . snd) ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))      -- theorem 2
+--bindK f g p = p (k2j (g (k2j f (\x -> fst ((p . snd) ((g x) (\x -> ((fst . p) x, x))))))) (fst . p))      -- Theorem 2
 --bindK f g p = p (k2j (g (k2j f (\x -> fst (((g x) (\x -> (p . snd) ((fst . p) x, x))))))) (fst . p))      -- simplify
 --bindK f g p = p (k2j (g (k2j f (\x -> fst (g x p)))) (fst . p))                                           -- def j2k
 --bindK f g p = p (k2j (g (snd (f (\x -> ((\x -> fst (g x p)) x, x))))) (fst . p))                          -- apply lambda
