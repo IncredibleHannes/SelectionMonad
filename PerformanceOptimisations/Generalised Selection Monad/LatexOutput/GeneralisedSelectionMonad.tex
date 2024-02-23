@@ -435,7 +435,7 @@ calculation anew for subsequent characters.
 
 \subsection{Efficiency Issues}\label{efficiency-issues}
 
-This inefficiency will be examined in more detail. When the \(sequence\)
+Lets examine this inefficiency in more detail. When the \(sequence\)
 function is utilised for the selection monad, an exhaustive search of
 all possible combinations of the values underlying the selection
 functions is executed. It is assumed that the \(minWith\) function
@@ -839,12 +839,12 @@ monads. Therefore, consider the following two operators that transform
 between \(GK\) selection functions and \(J\) selection functions:
 
 \begin{code}
-j2gk :: J r x -> GK r x
+j2gk :: J r a -> GK r a
 j2gk f p = p (f (fst . p))
 \end{code}
 
 \begin{code}
-gk2j :: GK r x -> J r x
+gk2j :: GK r a -> J r a
 gk2j f p = snd (f (\x -> (p x, x)))
 \end{code}
 
