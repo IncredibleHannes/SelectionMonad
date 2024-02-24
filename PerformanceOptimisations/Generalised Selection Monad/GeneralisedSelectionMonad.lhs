@@ -17,16 +17,16 @@ title: Towards a more efficient Selection Monad
 abstract:
   This paper explores a novel approach to selection functions through the 
   introduction of a generalised selection monad. The foundation is laid with the 
-  conventional selection monad $J$, defined as $(A \rightarrow R) \rightarrow A$, which 
-  employs a pair function to compute new selection functions. However, inefficiencies in 
-  the original pair function are identified. To address these issues, a specialised type 
-  $K$ is introduced, and its isomorphism to $J$ is demonstrated. The paper further 
-  generalises the $K$ type to $GK$, where performance improvements and enhanced 
-  intuitive usability are observed. The embeddings between $J$ and $GK$ are established, 
-  offering a more efficient and expressive alternative to the well established $J$ type 
-  for selection functions. The findings emphasise the advantages of the generalised 
-  selection monad and its applicability in diverse scenarios, paving the way for further 
-  exploration and optimisation.
+  conventional selection monad $J$, defined as $(A \rightarrow R) \rightarrow A$, together 
+  with various combinators for computing new selection functions from old. However, 
+  inefficiencies in these combinators are identified. To address these issues, a 
+  specialised type $K$ is introduced, and its isomorphism to $J$ is demonstrated. The 
+  paper further generalises the $K$ type to $G$, where performance improvements and 
+  enhanced intuitive usability are observed. The embeddings between $J$ and $G$ are 
+  established, offering a more efficient and expressive alternative to the well 
+  established $J$ type for selection functions. The findings emphasise the advantages 
+  of the generalised selection monad and its applicability in diverse scenarios, paving 
+  the way for further exploration and optimisation.
 ---
 
 Introduction
@@ -43,20 +43,20 @@ Additionally, it has been effectively employed in modeling greedy algorithms
 rely on its monadic behavior, particularly emphasising the use of the $sequence$ function 
 for monads.
 
-However, within the context of the selection monad, it becomes apparent that the 
+\qquad However, within the context of the selection monad, it becomes apparent that the 
 monadic behavior of the selection monad $J$ is needlessly inefficient. This inefficiency 
 is scrutinised in greater detail through the examination of the $sequence$ function, which 
 redundantly duplicates previously calculated work. To address this, the paper introduces 
-two alternative types, namely $K$ and $GK$, for the selection monad. It establishes that 
+two alternative types, namely $K$ and $G$, for the selection monad. It establishes that 
 the new $K$ type is isomorphic to the existing $J$ type, conveniently resolving the 
 inefficiency associated with the monadic sequence function. Subsequently, the $K$ type 
-undergoes further generalisation into the $GK$ type. The proposition presented in this 
-paper advocates for the adoption of the $GK$ type over the traditional $J$ type, citing 
-its efficiency advantages. Additionally, the $GK$ type is argued to be more intuitive for 
+undergoes further generalisation into the $G$ type. The proposition presented in this 
+paper advocates for the adoption of the $G$ type over the traditional $J$ type, citing 
+its efficiency advantages. Additionally, the $G$ type is argued to be more intuitive for 
 programming and, given its broader type, provides enhanced versatility for a wide array of 
 applications involving the selection monad.
 
-The upcoming section delves into the selection monad, with a particular focus on the type:
+\qquad The upcoming section delves into the selection monad, with a particular focus on the type:
 $J_{R,A}:(A \rightarrow R) \rightarrow A$ representing selection functions 
 \cite{escardo2010selection}. The exploration of the $pair$ function highlights its ability 
 to compute a new selection function based on criteria from two existing functions. 
@@ -68,7 +68,7 @@ proposal for an efficient solution to enhance the performance of the $pair$ func
 introductory overview sets the stage for a detailed exploration of the selection monad and 
 subsequent discussions on optimisations.
 
-All examples in this paper are modeled using Haskell.
+\qquad All examples in this paper are modeled using Haskell.
 
 Selection Functions
 ===================
@@ -86,9 +86,9 @@ The decision they need to make is either going towards the street the or wall:
 > data Decision = Street | Wall deriving (Eq, Show)
 
 The respective selection functions, given a property function that tells them what 
-decision is a good one, select the best one. If there are multiple optimal solutions, they 
-select an arbitrary one. And if there is no correct one, they default to walking towards 
-the wall.
+decision is acceptable, select the correct one. If there are multiple optimal solutions, 
+they select an arbitrary one. And if there is no correct one, they default to walking 
+towards the wall.
 
 > s :: J Bool Decision
 > s p = if p Street then Street else Wall
@@ -96,6 +96,7 @@ the wall.
 When given two selection functions, a $pair$ function can be defined to compute a new 
 selection function. This resultant function selects a pair based on the criteria 
 established by the two given selection functions:
+\newpage
 
 > pair :: J r a -> J r b -> J r (a,b)
 > pair f g p = (a,b)
@@ -123,7 +124,8 @@ property function. Intuitively, selection functions can be conceptualised as ent
 containing a collection of objects, waiting for a property function to assess their 
 underlying elements. Once equipped with a property function, they can apply it to their 
 elements and select an optimal one.
-Considering the types assigned to selection functions, it is evident that an initial 
+
+\qquad Considering the types assigned to selection functions, it is evident that an initial 
 selection function $f$ remains in anticipation of a property function of type 
 $(A \rightarrow R)$ to determine an optimal $A$. The $pair$ function is endowed with a 
 property function $p$ of type $((A,B) \rightarrow R)$. Through the utilisation of this 
@@ -159,7 +161,8 @@ the other one is heading. The specific destination does not matter, as long as t
 moving in different directions. Consequently, the original $pair$ function can be 
 conceived as a function that selects the optimal solution while retaining awareness of 
 previous solutions, whereas our modified $pair'$ does not.
-An issue with the original $pair$ function might have been identified by the attentive 
+
+\qquad An issue with the original $pair$ function might have been identified by the attentive 
 reader. There is redundant computational work involved. Initially, all possible pairs 
 are constructed to determine an optimal first element $A$, but the corresponding $B$ 
 that renders it an overall optimal solution is overlooked, resulting in only $A$ being 
@@ -190,7 +193,7 @@ by applying each function to a newly constructed property function that possesse
 capability to foresee the future, thereby constructing an optimal future based on the 
 currently examined element.
 
-However, a notable inefficiency persists, exacerbating the issue observed in the $pair$ 
+\qquad However, a notable inefficiency persists, exacerbating the issue observed in the $pair$ 
 function. During the determination of the first element, the $sequence$ function 
 calculates an optimal remainder of the list, only to overlook it and redundantly perform 
 the same calculation for subsequent elements. This inefficiency in $sequence$ warrants 
@@ -219,9 +222,7 @@ referred to as $sequence'$, defined as:
 >                     \xs -> return (x:xs)
 
 Notably, in the case of the selection monad, this built-in $sequence'$ function aligns 
-with the earlier provided $sequence$ implementation specific to the $J$ type. This 
-inherent consistency further solidifies the monadic nature of selection functions, 
-underscoring their alignment with established Haskell conventions. 
+with the earlier provided $sequence$ implementation specific to the $J$ type.
 
 Illustration of Sequence in the Context of Selection Functions
 --------------------------------------------------------------
@@ -281,7 +282,7 @@ precisely applies the property function $p$ once to each of its elements. The ef
 of the $sequence$ function is scrutinised to determine how often the property function $p$ 
 is invoked during the calculation of a solution.
 
-Given that $sequence$ operates as an exhaustive search resembling a tree search with a 
+\qquad Given that $sequence$ operates as an exhaustive search resembling a tree search with a 
 branching factor of $K$, the number of times the property function $p$ is called for a 
 tree of depth $n$ can be expressed as $T(n) = F(n) + T(n-1)$, where $F(n) = K * T(n-1)$. 
 Substituting $F(n)$ into $T(n)$ yields $T(n) = K * T(n-1) + T(n-1)$. This simplifies to 
@@ -289,12 +290,12 @@ $T(n) = (K + 1)^n$. While an exhaustive search on a tree can be performed with
 $T(n) = K^n$ calls of $p$, the $sequence$ function duplicates some of the work by 
 forgetting previously computed results.
 
-To address this specific inefficiency within the selection monad, concerning the pair and 
+\qquad To address this specific inefficiency within the selection monad, concerning the pair and 
 sequence functions, two new variations of the selection monad will be introduced. 
 Initially, an examination of a new special $K$ type will reveal its isomorphism to 
 the selection monad $J$. Subsequently, an exploration of the generalisation of this $K$ 
-type to the $GK$ type will enhance its intuitive usability. Remarkably, it will be 
-demonstrated that the $J$ monad can be embedded into this general $GK$ type.
+type to the $G$ type will enhance its intuitive usability. Remarkably, it will be 
+demonstrated that the $J$ monad can be embedded into this general $G$ type.
 
 Special K
 =========
@@ -324,7 +325,7 @@ is generated and returned. As this duplicate already represents the complete sol
 entire result for an optimal $x$ can now be straightforwardly yielded by $f$, eliminating 
 the need for additional computations.
 
-The $sequenceK$ for this special $K$ type can be defined as follows:
+\qquad The $sequenceK$ for this special $K$ type can be defined as follows:
 
 > sequenceK :: [K r a] -> K r [a]
 > sequenceK [] p     = (snd . p) []
@@ -374,7 +375,7 @@ To validate that these two operators indeed establish an isomorphism between $J_
 $K_{R,A}$,the following equations must be proven: 
 $(k2j \circ j2k) f = f$ and $(j2k \circ k2j) g = g$.
 
-\begin{proof}[$J$ to $K$ Embedding]\\
+\begin{proof}[$J$ to $K$ Embedding]
 \begin{reasoning}
   \ind{(k2j \circ j2k) f}
   \equals{Apply definitions}
@@ -387,19 +388,19 @@ $(k2j \circ j2k) f = f$ and $(j2k \circ k2j) g = g$.
 
 The proof utilises the direct application of lambda expressions and the definitions of 
 $fst$ and $snd$ for simplification. The facilitation of the proof for the second 
-isomorphism involves the initial introduction of the free theorem for the special $K$ type 
+isomorphism involves the initial introduction of the free  for the special $K$ type 
 \cite{wadler1989theorems}:
 
-\begin{theorem}[Free Theorem for $K$]\\
+\begin{theorem}[Free Theorem for $K$]
 Given the following functions with their corresponding types:
 \begin{reasoning}
 $g : K_{R,A}$\\
 $h : B_1 \rightarrow B_2$\\
 $p : A \rightarrow (R, B_1)$\\
-$*** : (A \rightarrow A') \rightarrow (B \rightarrow B') \rightarrow (A,B) \rightarrow (A',B')$\\
+$\mathbin{{*}{*}{*}} : (A \rightarrow A') \rightarrow (B \rightarrow B') \rightarrow (A,B) \rightarrow (A',B')$\\
 \end{reasoning}
 It follows:
-\[h (g\:p) = g ((id *** h) \circ p)\]
+\[h (g\:p) = g ((id \mathbin{{*}{*}{*}} h) \circ p)\]
 \end{theorem}
 
 The free theorem essentially asserts that a function $h$ of type $B_1 \rightarrow B_2$, 
@@ -407,16 +408,16 @@ when applied to the result of a selection function, can also be incorporated int
 property function and applied to each individual element. This follows from the 
 generalised type of $K$, where the only means of generating $B_1$ values is through the 
 application of $p$. Therefore, it becomes inconsequential whether $h$ is applied to the 
-final result or to each individual intermediate result. Note that $***$ is the operator
+final result or to each individual intermediate result. Note that $\mathbin{{*}{*}{*}}$ is the operator
 that given two functions $f: A \rightarrow A'$ and $g: B \rightarrow B'$ it returns a 
 function of type $(A,B) \rightarrow (A',B')$, where $f$ is applied to the first element of
 the tuple and $g$ is applied to the second element of the tuple.
 
-With the free theorem for $K$, the remaining portion of the isomorphism can now be 
+\qquad With the free theorem for $K$, the remaining portion of the isomorphism can now be 
 demonstrated as follows:
-
-\begin{proof}[$K$ to $J$ Embedding]\\
-The equality $(j2k \circ k2j) g = g$ is established through the following steps:\\
+\newpage
+\begin{proof}[$K$ to $J$ Embedding]
+The equality $(j2k \circ k2j) g = g$ is established through the following steps:
 \begin{reasoning}
   \ind{(j2k \circ k2j) g}
   \equals{Apply definitions and simplify}
@@ -435,109 +436,109 @@ subsequently deconstructed and discarded at a higher layer. This necessity signi
 complicates the associated definitions for $sequence$ and $pair$, making them challenging 
 to handle and less intuitive.
 
-The introduction of another type, $GK$, which returns the entire tuple rather than merely 
+\qquad The introduction of another type, $G$, which returns the entire tuple rather than merely 
 the result value, appears more intuitive. This shift is elaborated upon in the following 
-section, where $GK$ is observed to facilitate similar performance improvements while 
+section, where $G$ is observed to facilitate similar performance improvements while 
 simplifying the definitions. This method also removes the need for unnecessary data 
-copying. Nevertheless, it is disclosed that $GK$ is not isomorphic to $J$ and $K$ but 
-rather these can be embedded into $GK$. In contrast, an investigation into a specific 
-precondition allowing for $GK$ to be embedded into $J$ or $K$ is presented.
+copying. Nevertheless, it is disclosed that $G$ is not isomorphic to $J$ and $K$ but 
+rather these can be embedded into $G$. In contrast, an investigation into a specific 
+precondition allowing for $G$ to be embedded into $J$ or $K$ is presented.
 
 General K
 =============
 
-Consider the more general type $GK$, derived from the previous special $K$ type:
+Consider the more general type $G$, derived from the previous special $K$ type:
 
-> type GK r a = forall b. (a -> (r,b)) -> (r,b)
+> type G r a = forall b. (a -> (r,b)) -> (r,b)
 
-Unlike its predecessor, $GK$ returns the entire pair produced by the property function, 
-rather than just the result value. The implementation of $pairGK$ for the new $GK$ type no 
+Unlike its predecessor, $G$ returns the entire pair produced by the property function, 
+rather than just the result value. The implementation of $pairG$ for the new $G$ type no 
 longer necessitates the creation of a copy of the data structure. It suffices to return 
 the result of the property function's application to the complete pair:
 
-> pairGK :: GK r a -> GK r b -> GK r (a,b)
-> pairGK f g p = f (\x -> g (\y -> p (x,y)))
+> pairG :: G r a -> G r b -> G r (a,b)
+> pairG f g p = f (\x -> g (\y -> p (x,y)))
 
-In terms of readability, the definition of $pairGK$ is significantly more concise, with 
+In terms of readability, the definition of $pairG$ is significantly more concise, with 
 the essence of the $pair$ function being conveyed without unnecessary boilerplate code. 
 Every element $x$ of type $A$ within $f$ is inspected and evaluated by the given property 
 function $p$ for all $y$ of type $B$ within $g$. The optimal pair of $(A,B)$ values is 
 returned by the resulting pair selection function according to the provided property 
-function. Furthermore, $sequenceGK$ is defined as follows:
+function. Furthermore, $sequenceG$ is defined as follows:
 
-> sequenceGK :: [GK r a] -> GK r [a]
-> sequenceGK [] p     = p []
-> sequenceGK (e:es) p = e (\x  -> sequenceGK es 
->  	                      (\xs -> p (x:xs)))
+> sequenceG :: [G r a] -> G r [a]
+> sequenceG [] p     = p []
+> sequenceG (e:es) p = e (\x  -> sequenceG es 
+>  	                     (\xs -> p (x:xs)))
 
-Following a similar pattern, this $sequenceGK$ function builds all possible futures for 
+Following a similar pattern, this $sequenceG$ function builds all possible futures for 
 each element within $e$. Once an optimal list of elements is found, this list is simply 
 returned along with the corresponding $R$ value.
 
 Relationship of J and Special K
 -----------------------------------
-With the following operators, selection functions of type $K$ can be embedded into $GK$.
+With the following operators, selection functions of type $K$ can be embedded into $G$.
 \ignore{
 
-> gk2k :: forall r a b. ((a -> (r,b)) -> (r,b)) -> ((a -> (r,b)) -> b)
-> gk2k f = snd . f
+> g2k :: forall r a b. ((a -> (r,b)) -> (r,b)) -> ((a -> (r,b)) -> b)
+> g2k f = snd . f
 
 }
 
 \begin{haskell}
-gk2k :: GK r a -> K r a 
-gk2k f = snd . f
+g2k :: G r a -> K r a 
+g2k f = snd . f
 \end{haskell}
 
-> k2gk :: K r a -> GK r a
-> k2gk f p = f (\x -> let (r,y) = p x in (r, (r,y)))
+> k2g :: K r a -> G r a
+> k2g f p = f (\x -> let (r,y) = p x in (r, (r,y)))
 
 Similar to the free theorem for the $K$ type, it is equally possible to derive the free 
-theorem \cite{wadler1989theorems} for the new $GK$ type:
+theorem \cite{wadler1989theorems} for the new $G$ type:
 
-\begin{theorem}[Free Theorem for $GK$]\\
+\begin{theorem}[Free Theorem for $G$]
 Given the following functions with their corresponding types:
 \begin{reasoning}
-  $g : GK_{R,A}$\\
+  $g : G_{R,A}$\\
   $f : B_1 \rightarrow B_2$\\
   $p : A \rightarrow (R, B_1)$\\
-  $*** : (A \rightarrow A') \rightarrow (B \rightarrow B') \rightarrow (A,B) \rightarrow (A',B')$\\
+  $\mathbin{{*}{*}{*}} : (A \rightarrow A') \rightarrow (B \rightarrow B') \rightarrow (A,B) \rightarrow (A',B')$\\
 \end{reasoning}
 It follows:
-\[((id *** f) \circ g) p = g ((id *** f) \circ p)\]
+\[((id \mathbin{{*}{*}{*}} f) \circ g) p = g ((id \mathbin{{*}{*}{*}} f) \circ p)\]
 \end{theorem}
 This theorem communicates a concept similar to the free theorem for $K$. It suggests that 
 the outcome remains unchanged whether a function $f$ is applied directly to the final 
 result of a selection function or within the selection function's property function. This 
-idea is now adapted to include the behavior of the $GK$ type, which also returns the $R$ 
+idea is now adapted to include the behavior of the $G$ type, which also returns the $R$ 
 value.
 
-By using the free theorem for $GK$, it becomes clear that selection functions designed for 
-the $K$ type can be directly embedded into the $GK$ structure:
+\qquad By using the free theorem for $G$, it becomes clear that selection functions designed for 
+the $K$ type can be directly embedded into the $G$ structure:
 
-\begin{theorem}[$K$ to $GK$ Embedding]\\
+\begin{theorem}[$K$ to $G$ Embedding]
 Given:
 \begin{reasoning}
   $f : K_{R,A}$
 \end{reasoning}
-The following embedding of $f$ into $GK$ follows:
-\[(k2gk \circ gk2k) f = f\]
+The following embedding of $f$ into $G$ follows:
+\[(k2g \circ g2k) f = f\]
 \end{theorem}
 
-The proof for this embedding is straight forward utilising the free theorem for $GK$:
+The proof for this embedding is straight forward utilising the free theorem for $G$:
 
-\begin{proof}[$K$ to $GK$ Embedding]\\
+\begin{proof}[$K$ to $G$ Embedding]
 Assuming that for:
 \begin{reasoning}
 $f : K_{R,A}$
 \end{reasoning}
 It can be reasoned:
 \begin{reasoning}
-  \ind{(gk2k \circ k2gk) f}
+  \ind{(g2k \circ k2g) f}
   \equals{Definitions and rewrite}
   \ind{\lambda p \rightarrow (snd \circ f) (\lambda x \rightarrow \text{ let }(r,y) = 
         p\:x\text{ in } (r, (r,y)))}
-  \equals{Free theorem of $GK$}
+  \equals{Free theorem of $G$}
   \ind{\lambda p \rightarrow f (\lambda x \rightarrow \text{ let }(r,y) = p\:x \text{ in }
        (r, snd (r,y)))}
   \equals{Simplify}
@@ -545,34 +546,34 @@ It can be reasoned:
 \end{reasoning}
 \end{proof}
 
-Further, to establish that selection functions of type $GK$ can be embedded into the $K$ 
+Further, to establish that selection functions of type $G$ can be embedded into the $K$ 
 type a specific precondition is introduced, under which this embedding is possible:
 
-\begin{theorem}[$GK$ to $K$ Embedding]\\
+\begin{theorem}[$G$ to $K$ Embedding]
 Assuming that for:
 \begin{reasoning}
-  $g : GK_{R,A} $\\
+  $g : G_{R,A} $\\
   $\forall p : \forall B . A \rightarrow (R,B), \exists x : A \text{ such that: } 
   g\:p = p\:x$
 \end{reasoning}
 It follows:
-\[(k2gk \circ gk2k) g = g\]
+\[(k2g \circ g2k) g = g\]
 \end{theorem}
 
 The essential condition is that the selection function $g$ should not modify the $R$ value 
 after $p$ has been applied to its elements. Given this precondition, the embedding can be 
 proven as follows:
 
-\begin{proof}[$GK$ to $K$ Embedding]\\
+\begin{proof}[$G$ to $K$ Embedding]
 Assuming that for:
 \begin{reasoning}
-  $g : GK_{R,A} $\\
+  $g : G_{R,A} $\\
   $\forall p : \forall B . A \rightarrow (R,B), \exists x : A \text{ such that: } 
   g\:p = p\:x$
 \end{reasoning}
 It can be reasoned:
 \begin{reasoning}
-\ind{(k2gk \circ gk2k) g}
+\ind{(k2g \circ g2k) g}
   \equals{Definitions and rewrite}
   \ind{\lambda p \rightarrow snd (g(\lambda x \rightarrow \text{ let }(r,y) = p\:x 
        \text{ in }(r, (r,y))))}
@@ -589,63 +590,64 @@ It can be reasoned:
 \end{reasoning}
 \end{proof}
 
-GK forms a monad
+G forms a monad
 ==================
 
-The formation of the monad for $GK$ follows a straightforward definition:
+The formation of the monad for $G$ follows a straightforward definition:
 
-> bindGK :: GK r a -> (a -> GK r b) -> GK r b
-> bindGK e f p = e (\x -> f x p)
+> bindG :: G r a -> (a -> G r b) -> G r b
+> bindG e f p = e (\x -> f x p)
 
-In this context, given a selection function $e$ of type $GK_{R,A}$, a function $f$ of type
-$A \rightarrow GK_{R,A}$, and a property function $p$ of type
+In this context, given a selection function $e$ of type $G_{R,A}$, a function $f$ of type
+$A \rightarrow G_{R,A}$, and a property function $p$ of type
 $\forall C. B \rightarrow (R,C)$, the outcome of type $(R,C)$ is assembled through the
 utilisation of $e$. Each element $x$ of type $A$ underlying $e$ undergoes assessment by
 applying $f$. This process yields a pair consisting of the $R$ value, which serves as the
 basis for judgment, and the result value of type $C$. As the pair is already of the 
 correct type, a straightforward return suffices.
+The return for the $G$ type is defined as follows:
 
-The return for the $GK$ type is defined as follows:
-
-> returnGK :: a -> GK r a
-> returnGK x p = p x
+> returnG :: a -> G r a
+> returnG x p = p x
 
 The proofs substantiating the monad laws are annexed in the appendix.
-
 Exploring the alignment of these monad definitions with those of $J$ or $K$, respectively, 
-is our next objective. The aim is to ensure that the behavior of the $GK$ monad aligns 
+is our next objective. The aim is to ensure that the behavior of the $G$ monad aligns 
 with that of the $J$ and $K$ monads. Therefore, consider the following two operators that 
-transform between $GK$ selection functions and $J$ selection functions:
+transform between $G$ selection functions and $J$ selection functions:
 
-> j2gk :: J r a -> GK r a
-> j2gk f p = p (f (fst . p))
+> j2g :: J r a -> G r a
+> j2g f p = p (f (fst . p))
 
-> gk2j :: GK r a -> J r a
-> gk2j f p = snd (f (\x -> (p x, x)))
+> g2j :: G r a -> J r a
+> g2j f p = snd (f (\x -> (p x, x)))
 
-Utilising these operators, it can be shown that the $GK$ monad definition aligns with the 
-$J$ monad definition in the case that the $GK$ selection functions fulfill the previously
+Utilising these operators, it can be shown that the $G$ monad definition aligns with the 
+$J$ monad definition in the case that the $G$ selection functions fulfill the previously
 introduced precondition for the embedding. This is achieved by proving the following 
 theorem:
 
-\begin{theorem}[$GK$ Monad Embedding]\\
-Given:\\
-  $f : GK_{R,A} $\\
-  $g : a \rightarrow GK_{R,B} $\\
+\begin{theorem}[$G$ Monad Embedding]
+Given:
+\begin{reasoning}
+  $f : G_{R,A} $\\
+  $g : a \rightarrow G_{R,B} $\\
   $\forall p : \forall B . A \rightarrow (R,B), \exists x : A \text{ such that: } 
   g\:p = p\:x$
+\end{reasoning}
 It follows:
-  \[j2gk (gk2j\:f >>= gk2j \circ g) = bindGk f g\]
+  \[j2g (g2j\:f \mathbin{>\!\!\!>\mkern-6.7mu=} g2j \circ g) = bindGk f g\]
 \end{theorem}
 
 To derive the monad definitions from the embedding operators, it is convenient to 
 introduce the following two lemmas:
 
+\newpage
 \begin{lemma}
 Given:
 \begin{reasoning}
 $f : (R,B_1) \rightarrow (R,B_2)$\\
-$g : GK_{R,A}$\\
+$g : G_{R,A}$\\
 $p : A \rightarrow (R,B_1)$
 \end{reasoning}
 It follows:
@@ -653,14 +655,13 @@ It follows:
 \end{lemma}
 
 This lemma asserts that given a function $f$ acting upon the result of a selection 
-function of type $GK_{R,A}$, it is possible to apply $f$ to each element of $GK_{R,A}$ 
+function of type $G_{R,A}$, it is possible to apply $f$ to each element of $G_{R,A}$ 
 within the property function, provided $f$ solely transforms the $B$ value without 
 affecting the $R$ value.
 
-\begin{proof}[Lemma 1]\\
-Assuming that for:
+\begin{proof}[Lemma 1] Assuming that for:
 \begin{reasoning}
-$(1)\:f : (R,B_1) \rightarrow (R,B_2),g : GK_{R,A}, p : A \rightarrow (R,B_1)$\\
+$(1)\:f : (R,B_1) \rightarrow (R,B_2),g : G_{R,A}, p : A \rightarrow (R,B_1)$\\
 $(2)\:\forall p : \forall B . A \rightarrow (R,B), \exists x : A \text{ such that } 
 g\:p = p\:x$\\
 $(3)\:fst \circ f \circ p = fst \circ p$
@@ -678,7 +679,7 @@ It can be reasoned:
   \ind{\exists x .(\lambda (r,y) \rightarrow (r, (snd \circ f) (r, y))) p\:x}
   \equals{Assumption (2)}
   \ind{(\lambda (r,y) \rightarrow (r, (snd \circ f) (r, y))) g\:p}
-  \equals{Free Theorem for $GK$}
+  \equals{Free Theorem for $G$}
   \ind{g ((\lambda (r,y) \rightarrow  (r, (snd \circ f) (r,y))) \circ p) }
   \equals{Rewrite}
   \ind{g (\lambda x \rightarrow ((fst \circ p) x,  (snd \circ f \circ p) x))}
@@ -690,7 +691,7 @@ It can be reasoned:
 \end{proof}
 
 To further simplify the calculation the following lemma is introduced:
-
+\newpage
 \begin{lemma}
 Let $q$ be a function that applies $p$ to obtain the $R$ value while preserving the 
 original value. If this original value is subsequently utilised to compute the $(R,Z)$ 
@@ -704,10 +705,8 @@ It follows:
 \[(p \circ snd) (g\:q) = g\:p \text{ where } q = \lambda x \rightarrow ((fst \circ p) x, 
 x)\]
 \end{lemma}
-
 To prove Lemma 2, Lemma 1 is utilised:
-
-\begin{proof}[Lemma 2]\\
+\begin{proof}[Lemma 2]
 \begin{reasoning}
   \ind{(p \circ snd) (g\:q)}
   \equals{Definition of $q$}
@@ -717,7 +716,7 @@ To prove Lemma 2, Lemma 1 is utilised:
   \equals{Simplify}
   \ind{g\:p}
 \end{reasoning}
-$\iff$
+To apply Lemma 1, the following condition from Lemma 1 must be fulfilled:
 \begin{reasoning}
   \ind{(fst \circ p \circ snd) (\lambda x \rightarrow ((fst \circ p) x, x))}
   \equals{Simplify}
@@ -732,25 +731,27 @@ $\iff$
 \end{reasoning}
 \end{proof}
 
-Now it is possible calculate the $bindGK$ implementation for $GK$ with the $j2gk$ and 
-$gk2j$ operators and the previously introduced theorems:
+Now it is possible calculate the $bindG$ implementation for $G$ with the $j2g$ and 
+$g2j$ operators and the previously introduced theorems:
 
-\begin{proof}[$GK$ Monad behaves similar to $J$]\\
+\begin{proof}[$G$ Monad behaves similar to $J$]
 \begin{reasoning}
-  \ind{j2gk (gk2j\:f >>= gk2j \circ g)}
-  \equals{Definition of $J_{>>=}$}
-  \ind{j2gk ((\lambda f\:g\:p \rightarrow g (f (p \circ flip\:g\:p)) p) (gk2j\:f) 
-      (gk2j \circ g))}
+  \ind{j2g (g2j\:f \mathbin{>\!\!\!>\mkern-6.7mu=} g2j \circ g)}
+  \equals{Definition of $J_{\mathbin{>\!\!\!>\mkern-6.7mu=}}$}
+  \ind{j2g ((\lambda f\:g\:p \rightarrow g (f (p \circ flip\:g\:p)) p) (g2j\:f) 
+      (g2j \circ g))}
   \equals{simplify}
-  \ind{j2gk (\lambda p \rightarrow gk2j (g (gk2j\:f (p \circ (\lambda x \rightarrow gk2j 
+  \ind{j2g (\lambda p \rightarrow g2j (g (g2j\:f (p \circ (\lambda x \rightarrow g2j 
       (g\:x) p)))) p)}
   \equals{Definition of j2k and rewrite}
-  \ind{\lambda p \rightarrow p (gk2j (g (gk2j f (\lambda x \rightarrow fst ((p \circ snd) 
-      ((g\:x) (\lambda x \rightarrow ((fst \circ p) x, x))))))) (fst \circ p))}
+  \ind{\lambda p \rightarrow p (g2j (g (g2j f (\lambda x \rightarrow fst ((p \circ snd) 
+      ((g\:x) (\lambda x \rightarrow ((fst \circ p) x, x)))))))}
+  \ind{(fst \circ p))}
   \equals{Lemma 1}
-  \ind{\lambda p \rightarrow p (gk2j (g (gk2j f (\lambda x \rightarrow fst (((g\:x) 
-      (\lambda x \rightarrow (p \circ snd) ((fst \circ p) x, x))))))) (fst \circ p))}
-  \equals{Definition of j2gk and rewrite}
+  \ind{\lambda p \rightarrow p (g2j (g (g2j f (\lambda x \rightarrow fst (((g\:x) 
+      (\lambda x \rightarrow (p \circ snd) ((fst \circ p) x, x)))))))}
+  \ind{(fst \circ p))}
+  \equals{Definition of j2g and rewrite}
   \ind{\lambda p \rightarrow p (snd (g (snd (f (\lambda x \rightarrow (fst(g\:x\:p), x)))) 
       (\lambda x \rightarrow ((fst \circ p) x, x))))}
   \equals{Lemma 2}
@@ -766,19 +767,19 @@ $gk2j$ operators and the previously introduced theorems:
 \end{reasoning}
 \end{proof}
 
-This shows that all $GK$ selection functions fulfilling the precondition behave the same 
+This shows that all $G$ selection functions fulfilling the precondition behave the same 
 when transformed to $K$ or $J$ selection functions.
 
 Performance Analysis
 ====================
 
-In this section, the performance of the $J$, $K$, and $GK$ monads will be compared. All 
+In this section, the performance of the $J$, $K$, and $G$ monads will be compared. All 
 three are designed to perform an exhaustive search, exploring the complete problem space 
 to select the best possible solution. The comparison will focus on the number of calls to 
 the property function $p$, as well as the time taken for each of the monads to calculate a 
 solution.
 
-Given the following $maxWith$ functions for each of the monad types:
+\qquad Given the following $maxWith$ functions for each of the monad types:
 
 > maxWithJ :: Ord r => [a] -> J r a
 > maxWithJ xs f = snd (maximumBy (compare `on` fst) 
@@ -787,8 +788,8 @@ Given the following $maxWith$ functions for each of the monad types:
 > maxWithK :: Ord r => [a] -> K r a
 > maxWithK xs f = snd (maximumBy (compare `on` fst) (map f xs))
 
-> maxWithGK :: Ord r => [a] -> GK r a
-> maxWithGK xs f = maximumBy (compare `on` fst) (map f xs)
+> maxWithG :: Ord r => [a] -> G r a
+> maxWithG xs f = maximumBy (compare `on` fst) (map f xs)
 
 Runtime Analysis
 ----------------
@@ -799,7 +800,7 @@ functions simply sum up the elements of a given list of integers.
 
 > pJ :: [Int] -> Int
 > pJ = sum
-
+>
 > pK :: [Int] -> (Int, [Int])
 > pK x = (sum x, x)
 
@@ -809,12 +810,12 @@ maximise a given property function.
 
 > js :: [J Int Int]
 > js = replicate 6 (maxWithJ [1..10])
-
+>
 > ks :: [K Int Int]
 > ks = replicate 6 (maxWithK [1..10])
-
-> gks :: [GK Int Int]
-> gks = replicate 6 (maxWithGK [1..10])
+>
+> gs :: [G Int Int]
+> gs = replicate 6 (maxWithG [1..10])
 
 Considering a list of selection functions with a length of $6$, where each selection 
 function explores $10$ possible elements, the search space size is $10^6$. This search 
@@ -832,27 +833,27 @@ ghci> sequenceK ks pK
 [10,10,10,10,10,10]
 (2.85 secs, 2,431,196,064 bytes)
 
-ghci> sequenceGK gks pK
+ghci> sequenceG gs pK
 (60,[10,10,10,10,10,10])
 (1.56 secs, 869,778,256 bytes)
 \end{haskell}
 
 The results obtained from GHCi already demonstrate a significant improvement in 
-performance for the $GK$ and $K$ monad. It further highlights the space efficiency of the 
-$GK$ monad over the $J$ and $K$ monad, while further showing the significant memory
+performance for the $G$ and $K$ monad. It further highlights the space efficiency of the 
+$G$ monad over the $J$ and $K$ monad, while further showing the significant memory
 overhead of the $K$ type, that is due to the nested duplications of the final solution.
 
-For a more robust performance analysis, the runtime of each type was tested with 
+\qquad For a more robust performance analysis, the runtime of each type was tested with 
 increasing depth of the search tree, i.e., longer lists of selection functions. This 
-analysis was performed on the compiled version of the code to utilise any potential 
-performance improvements the compiler offers.
+analysis was performed on the compiled version of the code with the -O2 optimisation flag 
+enabled to utilise any potential performance improvements the compiler offers.
 
 \begin{filecontents}{thu3.dat}
 X Time      Part1  Part2   Part3
 1 $10^6$	0.3	   0.25    0.19
-2 $10^7$	3.3    2.2     1.55
-3 $10^8$	40.8   24.25   16.18
-4 $10^9$	601    319.2   169.67
+2 $10^7$	1.5    1.3     0.75
+3 $10^8$	15.6   13.5    6.13
+4 $10^9$	320    203.6   75.5
 \end{filecontents}
 \begin{figure}[H]
 \begin{center}
@@ -870,24 +871,24 @@ ymin=0,
 \addplot[green,thick,mark=square*] table [y= Part2,x=X]{thu3.dat};
 \addlegendentry{$K$}
 \addplot[blue,thick,mark=square*] table [y= Part3,x=X]{thu3.dat};
-\addlegendentry{$GK$}
+\addlegendentry{$G$}
 \end{axis}
 \end{tikzpicture}
 \end{center}
-\caption{Runtime of $J$, $K$, and $GK$ with increasing complexity}
+\caption{Runtime of $J$, $K$, and $G$ with increasing complexity}
 \end{figure}
 
-Figure 1 plots the runtime of the compiled Haskell code for each monad $J$, $K$, and $GK$ 
+Figure 1 plots the runtime of the compiled Haskell code for each monad $J$, $K$, and $G$ 
 as they navigate an increasingly complex search space. The graph demonstrates a consistent 
-trend where the $GK$ monad outperforms the others $J$ and $K$ types. As the depth of 
+trend where the $G$ monad outperforms the others $J$ and $K$ types. As the depth of 
 the search tree increases, the gap in performance becomes even more pronounced, clearly 
 showcasing the efficiency and effectiveness of the generalised selection monad approach. 
 
-Additionally, by employing Haskell's trace debug option, the frequency with which the 
+\qquad Additionally, by employing Haskell's trace debug option, the frequency with which the 
 property function was invoked for each monad was tallied. Through this method, 
 verification was achieved that for the $J$ monad, its property function is indeed 
 called $(K + 1)^n$ times. Conversely, owing to the performance enhancements, the $K$ and 
-$GK$ monads necessitate only $K^n$ calls to their property function, where $K$ represents
+$G$ monads necessitate only $K^n$ calls to their property function, where $K$ represents
 the branching factor and $n$ the depth of the search tree being explored.
 
 Related and Future Work
@@ -902,27 +903,27 @@ theory \cite{escardo2010sequential}, and algorithm design. Notably, within algor
 design, the $J$ monad can also be utilised in modeling greedy algorithms 
 \cite{hartmann2022algorithm}.
 
-When considering the implementation of greedy algorithms via the $J$ monad, it is 
+\qquad When considering the implementation of greedy algorithms via the $J$ monad, it is 
 important to acknowledge that the performance optimisations proposed in this paper do not 
 extend to these algorithms. The reason is that the greedy algorithm approach is already 
 optimal when applied through the $J$ type, without unnecessarily duplicating any 
 computations. However, this revelation paves the way for further research into the 
-modeling of greedy algorithms using the new $GK$ type. Investigating this could determine 
-if the efficiencies intrinsic to the $GK$ monad might present any benefits for greedy 
+modeling of greedy algorithms using the new $G$ type. Investigating this could determine 
+if the efficiencies intrinsic to the $G$ monad might present any benefits for greedy 
 algorithms, given their already optimal performance under the $J$ type.
 
-Jules Hedges contributions have laid a solid foundation in understanding the monad 
+\qquad Jules Hedges contributions have laid a solid foundation in understanding the monad 
 transformer for the conventional $J$ selection monad \cite{hedges2014monad}. This work has 
 illuminated the potential for integrating selection functions into more intricate 
 computational constructs. Future research should consider extending these insights to the 
-$GK$ type through the development of a corresponding monad transformer. Such endeavors 
+$G$ type through the development of a corresponding monad transformer. Such endeavors 
 could reveal new applications, potentially enhancing the computational efficiency and 
 expressiveness of functional programming paradigms that leverage selection monads.
 
-The advent of the $GK$ type, marks a progression by mitigating redundant computations, 
+\qquad The advent of the $G$ type, marks a progression by mitigating redundant computations, 
 thus yielding performance enhancements in specific scenarios. Nonetheless, it is 
 imperative to maintain a measured perspective on the impact of these advancements. The 
-efficiency improvements offered by the $GK$ monad do not tackle the intrinsic challenge of 
+efficiency improvements offered by the $G$ monad do not tackle the intrinsic challenge of 
 exponential time complexity that is a hallmark of exhaustive search strategies. Although 
 reducing unnecessary computations is a noteworthy optimisation, the broader issue of 
 exhaustive search strategies' computational demands remains largely unchanged. Future 
@@ -934,43 +935,43 @@ Conclusion
 ==========
 
 This paper presents a compelling case for the adoption of the new general selection monad 
-type $GK$ over the conventional $J$ type in the realm of functional programming, 
-particularly within the context of selection functions. The introduction of the $GK$ monad 
+type $G$ over the conventional $J$ type in the realm of functional programming, 
+particularly within the context of selection functions. The introduction of the $G$ monad 
 marks a significant advancement in the field, offering not only performance improvements 
 but also a more intuitive and practical approach to monad, pair, and sequence 
 implementations.
 
-The core argument for transitioning to the $GK$ monad stems from its utility and intuitive 
+\qquad The core argument for transitioning to the $G$ monad stems from its utility and intuitive 
 nature, which, though it may require a slight learning curve, ultimately provides a more 
 efficient and user-friendly programming experience. The performance enhancements 
-associated with the $GK$ monad are not merely theoretical but have practical implications 
+associated with the $G$ monad are not merely theoretical but have practical implications 
 for the execution of complex algorithms and the overall computational efficiency.
 
-Furthermore, the $GK$ monad's design facilitates a more intuitive understanding and 
+\qquad Furthermore, the $G$ monad's design facilitates a more intuitive understanding and 
 implementation of monad, pair, and sequence constructs for selection functions, which are 
 central to functional programming paradigms. This intuitiveness, coupled with the 
-performance gains, makes the $GK$ type an attractive alternative to the $J$ type.
+performance gains, makes the $G$ type an attractive alternative to the $J$ type.
 
-A pivotal finding of this research is that all $GK$ constructs meeting the specific 
+\qquad A pivotal finding of this research is that all $G$ constructs meeting the specific 
 precondition can be seamlessly embedded into the $J$ type. This implies that any model or 
 algorithm previously framed within the $J$ type can be transitioned to, or represented in, 
-the $GK$ framework without loss of functionality. Consequently, it is advocated that 
-future research and development in the selection monad domain pivot towards the $GK$ type. 
+the $G$ framework without loss of functionality. Consequently, it is advocated that 
+future research and development in the selection monad domain pivot towards the $G$ type. 
 This shift is recommended not only because of the aforementioned performance and usability 
-benefits but also to harness the full potential of the $GK$ type's more advanced and 
+benefits but also to harness the full potential of the $G$ type's more advanced and 
 efficient approach to handling selection functions.
 
-In light of these findings, it is proposed that ongoing and future work in the selection 
-monad sphere should utilise the advantages of the presented $GK$ type. This involves 
-translating existing work from the $J$ framework to the $GK$ framework, thus leveraging 
-the $GK$ type's advantages to foster a more efficient, intuitive, and robust functional 
-programming environment. The transition to the $GK$ type represents a forward-thinking 
+\qquad In light of these findings, it is proposed that ongoing and future work in the selection 
+monad sphere should utilise the advantages of the presented $G$ type. This involves 
+translating existing work from the $J$ framework to the $G$ framework, thus leveraging 
+the $G$ type's advantages to foster a more efficient, intuitive, and robust functional 
+programming environment. The transition to the $G$ type represents a forward-thinking 
 approach to functional programming, promising improvements in both the development and 
 execution of complex computational tasks.
 
 --- 
 appendix:
-  \subsection*{Proof Monad Laws for GK}\label{GK-monad-laws}
+  \subsection*{Proof Monad Laws for G}\label{G-monad-laws}
 
   \begin{proof}[Left identity]
 
