@@ -641,7 +641,7 @@ not isomorphic to \(J\) and \(K\) but rather these can be embedded into
 \(G\). In contrast, an investigation into a specific precondition
 allowing for \(G\) to be embedded into \(J\) or \(K\) is presented.
 
-\section{General K}\label{general-k}
+\section{General G}\label{general-g}
 
 Consider the more general type \(G\), derived from the previous special
 \(K\) type:
@@ -682,8 +682,8 @@ possible futures for each element within \(e\). Once an optimal list of
 elements is found, this list is simply returned along with the
 corresponding \(R\) value.
 
-\subsection{Relationship of J and Special
-K}\label{relationship-of-j-and-special-k}
+\subsection{Relationship between General G and Special
+K}\label{relationship-between-general-g-and-special-k}
 
 With the following operators, selection functions of type \(K\) can be
 embedded into \(G\).
@@ -1099,12 +1099,13 @@ version of the code with the -O2 optimisation flag enabled to utilise
 any potential performance improvements the compiler offers.
 
 \begin{filecontents}{thu3.dat}
-X Time      Part1  Part2   Part3
-1 $10^6$    0.3    0.25    0.19
-2 $10^7$    1.5    1.3     0.75
-3 $10^8$    15.6   13.5    6.13
-4 $10^9$    320    203.6   75.5
+X Time      Part1   Part2   Part3
+1 $10^6$      0.3       0.25    0.19
+2 $10^7$      1.5     1.3     0.75
+3 $10^8$      15.6    13.5    6.13
+4 $10^9$      320.0   203.6   75.5
 \end{filecontents}
+
 \begin{figure}[H]
 \begin{center}
 \begin{tikzpicture}
